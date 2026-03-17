@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "scheme": "fresh-mansions",
+    "userInterfaceStyle": "automatic",
+    "orientation": "default",
+    "web": {
+      "bundler": "metro"
+    },
+    "name": "fresh-mansions",
+    "slug": "fresh-mansions",
+    "plugins": ["expo-font"],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

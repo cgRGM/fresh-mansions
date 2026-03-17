@@ -1,0 +1,25 @@
+{
+  "name": "@fresh-mansions/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@better-auth/expo": "catalog:",
+    "@fresh-mansions/db": "workspace:*",
+    "@fresh-mansions/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@fresh-mansions/config": "workspace:*",
+    "typescript": "^5"
+  }
+}

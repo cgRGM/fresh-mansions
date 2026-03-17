@@ -1,0 +1,58 @@
+{
+  "name": "fresh-mansions",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "dotenv": "^17.2.2",
+      "zod": "^4.1.13",
+      "@cloudflare/workers-types": "^4.20251213.0",
+      "better-auth": "1.5.2",
+      "alchemy": "^0.87.0",
+      "wrangler": "^4.54.0",
+      "lucide-react": "^0.546.0",
+      "next-themes": "^0.4.6",
+      "sonner": "^2.0.5",
+      "tailwindcss": "^4.1.18",
+      "@libsql/client": "0.15.15",
+      "libsql": "0.5.22",
+      "@tanstack/react-form": "^1.28.0",
+      "@types/react-dom": "^19.2.3",
+      "@better-auth/expo": "1.5.2"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "check-types": "turbo check-types",
+    "dev:native": "turbo -F native dev",
+    "dev:web": "turbo -F web dev",
+    "dev:server": "turbo -F server dev",
+    "db:push": "turbo -F @fresh-mansions/db db:push",
+    "db:generate": "turbo -F @fresh-mansions/db db:generate",
+    "deploy": "turbo -F @fresh-mansions/infra deploy",
+    "destroy": "turbo -F @fresh-mansions/infra destroy",
+    "check": "ultracite check",
+    "fix": "ultracite fix"
+  },
+  "dependencies": {
+    "@fresh-mansions/env": "workspace:*",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@fresh-mansions/config": "workspace:*",
+    "@types/node": "^22.13.14",
+    "oxfmt": "latest",
+    "oxlint": "latest",
+    "turbo": "^2.8.12",
+    "typescript": "^5",
+    "ultracite": "7.3.1"
+  },
+  "packageManager": "bun@1.3.10"
+}
