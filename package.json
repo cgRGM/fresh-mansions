@@ -11,7 +11,7 @@
       "zod": "^4.1.13",
       "@cloudflare/workers-types": "^4.20251213.0",
       "better-auth": "1.5.2",
-      "alchemy": "^0.87.0",
+      "alchemy": "0.89.0",
       "wrangler": "^4.54.0",
       "lucide-react": "^0.546.0",
       "next-themes": "^0.4.6",
@@ -37,7 +37,8 @@
     "deploy": "turbo -F @fresh-mansions/infra deploy",
     "destroy": "turbo -F @fresh-mansions/infra destroy",
     "check": "ultracite check",
-    "fix": "ultracite fix"
+    "fix": "ultracite fix",
+    "alchemy:dev": "turbo -F @fresh-mansions/infra dev"
   },
   "dependencies": {
     "@fresh-mansions/env": "workspace:*",
@@ -45,9 +46,10 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "catalog:",
+    "@cloudflare/workers-types": "^4.20250805.0",
     "@fresh-mansions/config": "workspace:*",
     "@types/node": "^22.13.14",
+    "alchemy": "0.89.0",
     "oxfmt": "latest",
     "oxlint": "latest",
     "turbo": "^2.8.12",

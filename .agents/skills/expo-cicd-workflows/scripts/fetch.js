@@ -41,7 +41,7 @@ export async function fetchCached(url) {
   const data = await response.text();
   const expires = getExpires(response.headers);
 
-  await saveCacheEntry(cacheFile, { url, etag, expires, data });
+  await saveCacheEntry(cacheFile, { data, etag, expires, url });
 
   return data;
 }
@@ -52,7 +52,7 @@ function hashUrl(url) {
 
 async function loadCacheEntry(cacheFile) {
   try {
-    return JSON.parse(await readFile(cacheFile, "utf-8"));
+    return JSON.parse(await readFile(cacheFile, "utf8"));
   } catch {
     return null;
   }
@@ -89,7 +89,7 @@ function parseMaxAge(cacheControl) {
     return null;
   }
   const match = cacheControl.match(/max-age=(\d+)/i);
-  return match ? parseInt(match[1], 10) : null;
+  return match ? Number.parseInt(match[1], 10) : null;
 }
 
 if (import.meta.main) {
