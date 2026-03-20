@@ -12,10 +12,12 @@
   "scripts": {},
   "dependencies": {
     "@better-auth/expo": "catalog:",
+    "@better-auth/stripe": "1.5.2",
     "@fresh-mansions/db": "workspace:*",
     "@fresh-mansions/env": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
+    "stripe": "^20.4.1",
     "zod": "catalog:"
   },
   "devDependencies": {

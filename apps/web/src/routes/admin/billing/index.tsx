@@ -1,4 +1,3 @@
-import { env } from "@fresh-mansions/env/web";
 import { Badge } from "@fresh-mansions/ui/components/badge";
 import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
@@ -9,6 +8,7 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { listBilling } from "@/functions/admin/list-billing";
+import { apiClient } from "@/lib/api-client";
 import { formatCents } from "@/lib/estimates";
 
 export const Route = createFileRoute("/admin/billing/")({
@@ -86,23 +86,15 @@ function AdminBillingPage() {
       event.preventDefault();
 
       try {
-        const response = await fetch(
-          `${env.VITE_SERVER_URL}/api/admin/invoices`,
-          {
-            body: JSON.stringify({
-              amountDue: Number(invoiceForm.amountDue),
-              customerId: invoiceForm.customerId,
-              dueDate: invoiceForm.dueDate || undefined,
-              note: invoiceForm.note || undefined,
-              workOrderId: invoiceForm.workOrderId || undefined,
-            }),
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            method: "POST",
-          }
-        );
+        const response = await apiClient.api.admin.invoices.$post({
+          json: {
+            amountDue: Number(invoiceForm.amountDue),
+            customerId: invoiceForm.customerId,
+            dueDate: invoiceForm.dueDate || undefined,
+            note: invoiceForm.note || undefined,
+            workOrderId: invoiceForm.workOrderId || undefined,
+          },
+        });
 
         if (!response.ok) {
           throw new Error("Failed to create invoice");
@@ -124,23 +116,15 @@ function AdminBillingPage() {
       event.preventDefault();
 
       try {
-        const response = await fetch(
-          `${env.VITE_SERVER_URL}/api/admin/subscriptions`,
-          {
-            body: JSON.stringify({
-              customerId: subscriptionForm.customerId,
-              interval: subscriptionForm.interval,
-              intervalCount: Number(subscriptionForm.intervalCount),
-              nickname: subscriptionForm.nickname || undefined,
-              priceCents: Number(subscriptionForm.priceCents),
-            }),
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            method: "POST",
-          }
-        );
+        const response = await apiClient.api.admin.subscriptions.$post({
+          json: {
+            customerId: subscriptionForm.customerId,
+            interval: subscriptionForm.interval,
+            intervalCount: Number(subscriptionForm.intervalCount),
+            nickname: subscriptionForm.nickname || undefined,
+            priceCents: Number(subscriptionForm.priceCents),
+          },
+        });
 
         if (!response.ok) {
           throw new Error("Failed to create subscription");

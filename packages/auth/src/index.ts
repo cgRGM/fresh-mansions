@@ -1,12 +1,39 @@
 import { expo } from "@better-auth/expo";
+import { stripe as stripePlugin } from "@better-auth/stripe";
 import { db } from "@fresh-mansions/db";
 import * as schema from "@fresh-mansions/db/schema/auth";
 import { env } from "@fresh-mansions/env/server";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import StripeSdk from "stripe";
 
 const LOCAL_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/;
 const isDevelopment = process.env.NODE_ENV === "development";
+const stripeClient = env.STRIPE_SECRET_KEY
+  ? new StripeSdk(env.STRIPE_SECRET_KEY, {
+      apiVersion: "2026-02-25.clover",
+    })
+  : null;
+const authPlugins = [
+  expo(),
+  ...(stripeClient && env.STRIPE_WEBHOOK_SECRET
+    ? [
+        stripePlugin({
+          createCustomerOnSignUp: true,
+          getCustomerCreateParams: (user) =>
+            Promise.resolve({
+              metadata: {
+                app: "fresh-mansions",
+                role: "customer",
+                userId: user.id,
+              },
+            }),
+          stripeClient,
+          stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET,
+        }),
+      ]
+    : []),
+];
 
 export const auth = betterAuth({
   advanced: {
@@ -30,7 +57,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  plugins: [expo()],
+  plugins: authPlugins,
   secret: env.BETTER_AUTH_SECRET,
   trustedOrigins: (request) => {
     const requestOrigin = request?.headers.get("origin");

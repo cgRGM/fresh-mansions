@@ -1,4 +1,3 @@
-import { env } from "@fresh-mansions/env/web";
 import { Badge } from "@fresh-mansions/ui/components/badge";
 import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
@@ -17,6 +16,7 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { listContractors } from "@/functions/admin/list-contractors";
+import { apiClient } from "@/lib/api-client";
 
 export const Route = createFileRoute("/admin/contractors/")({
   component: AdminContractorsPage,
@@ -63,17 +63,9 @@ function AdminContractorsPage() {
       setIsCreating(true);
 
       try {
-        const response = await fetch(
-          `${env.VITE_SERVER_URL}/api/admin/contractors`,
-          {
-            body: JSON.stringify(form),
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            method: "POST",
-          }
-        );
+        const response = await apiClient.api.admin.contractors.$post({
+          json: form,
+        });
 
         if (!response.ok) {
           throw new Error("Failed to create contractor");
@@ -98,13 +90,12 @@ function AdminContractorsPage() {
   const handleGenerateOnboardingLink = useCallback(
     async (contractorId: string) => {
       try {
-        const response = await fetch(
-          `${env.VITE_SERVER_URL}/api/admin/contractors/${contractorId}/onboarding-link`,
-          {
-            credentials: "include",
-            method: "POST",
-          }
-        );
+        const response =
+          await apiClient.api.admin.contractors[":id"]["onboarding-link"].$post(
+            {
+              param: { id: contractorId },
+            }
+          );
 
         if (!response.ok) {
           throw new Error("Failed to create onboarding link");

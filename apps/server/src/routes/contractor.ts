@@ -7,8 +7,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { createApp } from "../lib/hono";
-import type { AppSession } from "../lib/session";
+import { createApp, requireSession } from "../lib/hono";
 import { requireAuth, requireRole } from "../middleware/auth";
 
 const app = createApp();
@@ -21,7 +20,7 @@ app.use("*", requireAuth);
 app.use("*", requireRole("contractor"));
 
 app.get("/me/route", async (c) => {
-  const session = c.get("session") satisfies AppSession;
+  const session = requireSession(c);
 
   if (!session.appUser.contractorId) {
     return c.json({ route: null, stops: [] });
@@ -68,7 +67,7 @@ app.get("/me/route", async (c) => {
 });
 
 app.get("/stops/:id", async (c) => {
-  const session = c.get("session") satisfies AppSession;
+  const session = requireSession(c);
 
   if (!session.appUser.contractorId) {
     return c.json({ error: "Stop not found" }, 404);
@@ -107,7 +106,7 @@ app.get("/stops/:id", async (c) => {
 });
 
 app.post("/stops/:id/complete", async (c) => {
-  const session = c.get("session") satisfies AppSession;
+  const session = requireSession(c);
 
   if (!session.appUser.contractorId) {
     return c.json({ error: "Stop not found" }, 404);

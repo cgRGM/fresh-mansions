@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "alchemy dev --stage newrgm",
+    "dev": "alchemy dev --stage dev",
     "deploy": "alchemy deploy",
     "destroy": "alchemy destroy"
   },

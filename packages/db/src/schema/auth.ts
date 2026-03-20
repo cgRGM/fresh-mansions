@@ -15,6 +15,7 @@ export const user = sqliteTable("user", {
   image: text("image"),
   name: text("name").notNull(),
   role: text("role").notNull().default("customer"),
+  stripeCustomerId: text("stripe_customer_id"),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .$onUpdate(getUpdatedAt)

@@ -10,8 +10,7 @@ import { quoteIntakeSchema } from "@fresh-mansions/db/validators";
 import { env } from "@fresh-mansions/env/server";
 import { and, eq } from "drizzle-orm";
 
-import { createApp } from "../lib/hono";
-import type { AppSession } from "../lib/session";
+import { createApp, requireSession } from "../lib/hono";
 import { requireAuth } from "../middleware/auth";
 
 const app = createApp();
@@ -65,7 +64,7 @@ const sanitizeFilename = (value: string): string => {
 };
 
 app.get("/", async (c) => {
-  const session = c.get("session") satisfies AppSession;
+  const session = requireSession(c);
   const { customerId } = session.appUser;
 
   if (!customerId) {
@@ -89,7 +88,7 @@ app.get("/", async (c) => {
 });
 
 app.get("/:id", async (c) => {
-  const session = c.get("session") satisfies AppSession;
+  const session = requireSession(c);
   const quoteId = c.req.param("id");
   const quoteRecord = await getAuthorizedQuote({
     quoteId,
@@ -104,7 +103,7 @@ app.get("/:id", async (c) => {
 });
 
 app.post("/", async (c) => {
-  const session = c.get("session") satisfies AppSession;
+  const session = requireSession(c);
   const userId = session.user.id;
   const body = quoteIntakeSchema.parse(await c.req.json());
 
@@ -158,7 +157,7 @@ app.post("/", async (c) => {
 });
 
 app.post("/:id/photos", async (c) => {
-  const session = c.get("session") satisfies AppSession;
+  const session = requireSession(c);
   const quoteId = c.req.param("id");
   const quoteRecord = await getAuthorizedQuote({
     quoteId,
@@ -211,7 +210,7 @@ app.post("/:id/photos", async (c) => {
 });
 
 app.get("/:quoteId/photos/:photoId", async (c) => {
-  const session = c.get("session") satisfies AppSession;
+  const session = requireSession(c);
   const quoteId = c.req.param("quoteId");
   const photoId = c.req.param("photoId");
   const quoteRecord = await getAuthorizedQuote({

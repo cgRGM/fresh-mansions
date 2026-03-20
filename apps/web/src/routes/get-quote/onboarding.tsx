@@ -1,4 +1,3 @@
-import { env } from "@fresh-mansions/env/web";
 import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
 import { Label } from "@fresh-mansions/ui/components/label";
@@ -16,9 +15,9 @@ import { toast } from "sonner";
 import * as zod from "zod";
 
 import { QuoteStepLayout } from "@/components/quote/quote-step-layout";
-import { createQuoteIntake } from "@/functions/create-quote-intake";
 import { getUser } from "@/functions/get-user";
 import { validateAddress } from "@/functions/validate-address";
+import { apiClient, getQuotePhotosUploadUrl } from "@/lib/api-client";
 
 const onboardingSearchSchema = zod.object({
   endDate: zod.string(),
@@ -85,14 +84,11 @@ const uploadQuotePhotos = async (
     formData.append("photos", file);
   }
 
-  const response = await fetch(
-    `${env.VITE_SERVER_URL}/api/quotes/${quoteId}/photos`,
-    {
-      body: formData,
-      credentials: "include",
-      method: "POST",
-    }
-  );
+  const response = await fetch(getQuotePhotosUploadUrl(quoteId), {
+    body: formData,
+    credentials: "include",
+    method: "POST",
+  });
 
   if (!response.ok) {
     throw new Error("Failed to upload photos");
@@ -236,8 +232,8 @@ const OnboardingStep = () => {
       setIsSubmitting(true);
 
       try {
-        const result = await createQuoteIntake({
-          data: {
+        const response = await apiClient.api.quotes.$post({
+          json: {
             addressLine2: parsed.data.addressLine2 || undefined,
             city: parsed.data.city,
             endDate: search.endDate,
@@ -270,6 +266,11 @@ const OnboardingStep = () => {
           },
         });
 
+        if (!response.ok) {
+          throw new Error("Failed to create estimate request");
+        }
+
+        const result = await response.json();
         await uploadQuotePhotos(files, result.quoteId);
 
         toast.success("Estimate visit requested");

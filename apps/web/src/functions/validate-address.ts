@@ -1,6 +1,7 @@
-import { env } from "@fresh-mansions/env/web";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+
+import { apiClient } from "@/lib/api-client";
 
 const validateAddressInputSchema = z.object({
   addressLine2: z.string().optional(),
@@ -13,16 +14,9 @@ const validateAddressInputSchema = z.object({
 export const validateAddress = createServerFn({ method: "POST" })
   .inputValidator(validateAddressInputSchema)
   .handler(async ({ data }) => {
-    const response = await fetch(
-      `${env.VITE_SERVER_URL}/api/integrations/address/validate`,
-      {
-        body: JSON.stringify(data),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      }
-    );
+    const response = await apiClient.api.integrations.address.validate.$post({
+      json: data,
+    });
 
     if (!response.ok) {
       throw new Error("Unable to validate address");

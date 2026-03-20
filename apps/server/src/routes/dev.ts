@@ -2,8 +2,7 @@ import { db } from "@fresh-mansions/db";
 import { customer, property, quote } from "@fresh-mansions/db/schema/domain";
 import { eq } from "drizzle-orm";
 
-import { createApp } from "../lib/hono";
-import type { AppSession } from "../lib/session";
+import { createApp, requireSession } from "../lib/hono";
 import { requireAuth } from "../middleware/auth";
 
 const app = createApp();
@@ -11,7 +10,7 @@ const app = createApp();
 app.use("*", requireAuth);
 
 app.post("/seed", async (c) => {
-  const session = c.get("session") satisfies AppSession;
+  const session = requireSession(c);
   const userId = session.user.id;
 
   const customerRecord = await db.query.customer.findFirst({

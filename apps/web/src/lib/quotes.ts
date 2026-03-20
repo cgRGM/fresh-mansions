@@ -1,4 +1,4 @@
-import { env } from "@fresh-mansions/env/web";
+import { getQuotePhotoUrl as buildQuotePhotoUrl } from "./api-client";
 
 const legacyStatusMap = {
   pending_review: "requested",
@@ -84,6 +84,17 @@ export const formatVisitTime = (value?: null | string): string => {
     return "Time pending";
   }
 
+  const visitWindowLabels: Record<string, string> = {
+    afternoon: "Afternoon (12-3 PM)",
+    early_morning: "Early morning (7-9 AM)",
+    late_afternoon: "Late afternoon (3-6 PM)",
+    morning: "Morning (9 AM-12 PM)",
+  };
+
+  if (value in visitWindowLabels) {
+    return visitWindowLabels[value];
+  }
+
   const [hoursString, minutesString] = value.split(":");
   const hours = Number(hoursString);
   const minutes = Number(minutesString);
@@ -112,5 +123,4 @@ export const formatScheduledVisit = (value?: Date | null): string => {
 export const getQuotePhotoUrl = (
   photo: { id: string; quoteId: string },
   quoteIdOverride?: string
-): string =>
-  `${env.VITE_SERVER_URL}/api/quotes/${quoteIdOverride ?? photo.quoteId}/photos/${photo.id}`;
+): string => buildQuotePhotoUrl(photo.id, quoteIdOverride ?? photo.quoteId);

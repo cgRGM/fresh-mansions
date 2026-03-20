@@ -6,8 +6,7 @@ import {
 } from "@fresh-mansions/db/schema/domain";
 import { desc, eq } from "drizzle-orm";
 
-import { createApp } from "../lib/hono";
-import type { AppSession } from "../lib/session";
+import { createApp, requireSession } from "../lib/hono";
 import { requireAuth, requireRole } from "../middleware/auth";
 
 const app = createApp();
@@ -16,7 +15,7 @@ app.use("*", requireAuth);
 app.use("*", requireRole("customer", "admin"));
 
 app.get("/summary", async (c) => {
-  const session = c.get("session") satisfies AppSession;
+  const session = requireSession(c);
   const customerId = c.req.query("customerId");
   const resolvedCustomerId =
     session.appUser.role === "admin" ? customerId : session.appUser.customerId;

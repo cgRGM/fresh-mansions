@@ -19,9 +19,20 @@ export const propertySizeEnum = zod.enum([
 ]);
 export type PropertySize = zod.infer<typeof propertySizeEnum>;
 
-export const preferredVisitTimeSchema = zod
-  .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Please choose a valid visit time");
+export const preferredVisitWindowEnum = zod.enum([
+  "early_morning",
+  "morning",
+  "afternoon",
+  "late_afternoon",
+]);
+export type PreferredVisitWindow = zod.infer<typeof preferredVisitWindowEnum>;
+
+export const preferredVisitTimeSchema = zod.union([
+  preferredVisitWindowEnum,
+  zod
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Please choose a valid visit time"),
+]);
 export type PreferredVisitTime = zod.infer<typeof preferredVisitTimeSchema>;
 
 export const quoteStatusEnum = zod.enum([

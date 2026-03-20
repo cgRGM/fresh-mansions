@@ -8,6 +8,7 @@
     "dev:bare": "vite dev"
   },
   "dependencies": {
+    "@better-auth/stripe": "1.5.2",
     "@fresh-mansions/auth": "workspace:*",
     "@fresh-mansions/db": "workspace:*",
     "@fresh-mansions/env": "workspace:*",
@@ -23,6 +24,7 @@
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "drizzle-orm": "^0.45.1",
+    "hono": "^4.8.2",
     "libsql": "catalog:",
     "lucide-react": "catalog:",
     "next-themes": "catalog:",

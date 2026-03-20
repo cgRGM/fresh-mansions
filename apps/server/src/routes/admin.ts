@@ -24,9 +24,9 @@ import {
 import { env } from "@fresh-mansions/env/server";
 import { hashPassword } from "better-auth/crypto";
 import { desc, eq } from "drizzle-orm";
-import { Hono } from "hono";
 import { z } from "zod";
 
+import { createApp } from "../lib/hono";
 import { validateAddressWithRadar } from "../lib/radar";
 import {
   createStripeAccountLink,
@@ -37,7 +37,7 @@ import {
 } from "../lib/stripe";
 import { requireAuth, requireRole } from "../middleware/auth";
 
-const app = new Hono();
+const app = createApp();
 
 const scheduleVisitSchema = z.object({
   scheduledVisitAt: z.string().min(1),
@@ -89,7 +89,9 @@ const getStripeCustomerId = async (customerId: string) => {
     ]);
 
   const cachedStripeCustomerId =
-    existingInvoice?.stripeCustomerId ?? existingSubscription?.stripeCustomerId;
+    customerRecord?.user?.stripeCustomerId ??
+    existingInvoice?.stripeCustomerId ??
+    existingSubscription?.stripeCustomerId;
 
   if (cachedStripeCustomerId) {
     return cachedStripeCustomerId;
@@ -104,6 +106,15 @@ const getStripeCustomerId = async (customerId: string) => {
     name: customerRecord.user.name,
     phone: customerRecord.phone,
   });
+
+  if (stripeCustomer?.customerId) {
+    await db
+      .update(user)
+      .set({
+        stripeCustomerId: stripeCustomer.customerId,
+      })
+      .where(eq(user.id, customerRecord.user.id));
+  }
 
   return stripeCustomer?.customerId ?? null;
 };
