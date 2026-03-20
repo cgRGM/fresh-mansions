@@ -20,6 +20,12 @@ export const app = new Hono<AppHonoContext>();
 
 app.use(logger());
 app.use("*", async (c, next) => {
+  if (c.req.path.startsWith("/api/auth/")) {
+    c.set("session", null);
+    await next();
+    return;
+  }
+
   const session = await getAppSession(c.req.raw.headers);
   c.set("session", session);
   await next();
