@@ -21,7 +21,9 @@ const requireBinding = <T>(value: T | undefined, name: string): T => {
 };
 
 const currentStage = process.env.ALCHEMY_STAGE ?? "dev";
-const useRemoteStateStore = process.env.CI === "true" || currentStage !== "dev";
+const isCiEnvironment =
+  process.env.CI !== undefined && process.env.CI !== "false";
+const useRemoteStateStore = isCiEnvironment || currentStage !== "dev";
 
 const app = await alchemy("fresh-mansions", {
   stateStore: useRemoteStateStore
