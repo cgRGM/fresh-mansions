@@ -5,6 +5,7 @@ import {
   TanStackStart,
   Worker,
 } from "alchemy/cloudflare";
+import { CloudflareStateStore } from "alchemy/state";
 import { config } from "dotenv";
 
 config({ path: "./.env" });
@@ -19,7 +20,17 @@ const requireBinding = <T>(value: T | undefined, name: string): T => {
   return value;
 };
 
-const app = await alchemy("fresh-mansions");
+const currentStage = process.env.ALCHEMY_STAGE ?? "dev";
+const useRemoteStateStore = process.env.CI === "true" || currentStage !== "dev";
+
+const app = await alchemy("fresh-mansions", {
+  stateStore: useRemoteStateStore
+    ? (scope) =>
+        new CloudflareStateStore(scope, {
+          scriptName: `fresh-mansions-state-${currentStage}`,
+        })
+    : undefined,
+});
 const betterAuthSecret = requireBinding(
   alchemy.secret.env.BETTER_AUTH_SECRET,
   "BETTER_AUTH_SECRET"
@@ -90,14 +101,18 @@ const serverBindings = {
 };
 
 export const web = await TanStackStart("web", {
+  adopt: true,
   bindings: webBindings,
   cwd: "../../apps/web",
+  delete: false,
 });
 
 export const server = await Worker("server", {
+  adopt: true,
   bindings: serverBindings,
   compatibility: "node",
   cwd: "../../apps/server",
+  delete: false,
   dev: {
     port: 3000,
   },
