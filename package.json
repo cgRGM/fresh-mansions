@@ -27,6 +27,7 @@
   "type": "module",
   "scripts": {
     "dev": "turbo dev",
+    "dev:portless": "portless proxy start --https --wildcard && portless alias app.lawnapp 3001 --force && portless alias api.lawnapp 3000 --force && BETTER_AUTH_URL=https://api.lawnapp.localhost CORS_ORIGIN=https://app.lawnapp.localhost VITE_SERVER_URL=https://api.lawnapp.localhost bun run alchemy:dev",
     "build": "turbo build",
     "check-types": "turbo check-types",
     "dev:native": "turbo -F native dev",

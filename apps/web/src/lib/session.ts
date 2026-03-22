@@ -1,12 +1,11 @@
+import { auth } from "@fresh-mansions/auth";
 import { db } from "@fresh-mansions/db";
 import { user } from "@fresh-mansions/db/schema/auth";
 import { contractor, customer } from "@fresh-mansions/db/schema/domain";
 import type { UserRole } from "@fresh-mansions/db/validators";
 import { eq } from "drizzle-orm";
 
-import { authClient } from "@/lib/auth-client";
-
-type AuthSession = Awaited<ReturnType<typeof authClient.getSession>>;
+type AuthSession = Awaited<ReturnType<typeof auth.api.getSession>>;
 
 export type AppSession = NonNullable<AuthSession> & {
   appUser: {
@@ -19,12 +18,7 @@ export type AppSession = NonNullable<AuthSession> & {
 export const getAppSession = async (
   headers: Headers
 ): Promise<AppSession | null> => {
-  const session = await authClient.getSession({
-    fetchOptions: {
-      headers,
-      throw: true,
-    },
-  });
+  const session = await auth.api.getSession({ headers });
 
   if (!session) {
     return null;
