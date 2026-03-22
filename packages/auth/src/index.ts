@@ -9,8 +9,44 @@ import StripeSdk from "stripe";
 
 import { hashPassword, verifyPassword } from "./password";
 
-const LOCAL_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/;
+const LOCAL_ORIGIN_PATTERN =
+  /^https?:\/\/(?:[a-z0-9-]+\.)*(localhost|127\.0\.0\.1)(:\d+)?$/i;
 const isDevelopment = process.env.NODE_ENV === "development";
+const getHostname = (url: string): string => new URL(url).hostname;
+const getSharedCookieDomain = (
+  authUrl: string,
+  appUrl: string
+): null | string => {
+  const authHostname = getHostname(authUrl);
+  const appHostname = getHostname(appUrl);
+
+  if (authHostname === appHostname) {
+    return null;
+  }
+
+  const authParts = authHostname.split(".");
+  const appParts = appHostname.split(".");
+  const sharedParts: string[] = [];
+
+  while (authParts.length > 0 && appParts.length > 0) {
+    const authPart = authParts.at(-1);
+    const appPart = appParts.at(-1);
+
+    if (!authPart || !appPart || authPart !== appPart) {
+      break;
+    }
+
+    sharedParts.unshift(authPart);
+    authParts.pop();
+    appParts.pop();
+  }
+
+  return sharedParts.length >= 2 ? sharedParts.join(".") : null;
+};
+const crossSubDomainCookieDomain = getSharedCookieDomain(
+  env.BETTER_AUTH_URL,
+  env.CORS_ORIGIN
+);
 const stripeClient = env.STRIPE_SECRET_KEY
   ? new StripeSdk(env.STRIPE_SECRET_KEY, {
       apiVersion: "2026-02-25.clover",
@@ -39,17 +75,19 @@ const authPlugins = [
 
 export const auth = betterAuth({
   advanced: {
+    ...(crossSubDomainCookieDomain
+      ? {
+          crossSubDomainCookies: {
+            domain: crossSubDomainCookieDomain,
+            enabled: true,
+          },
+        }
+      : {}),
     defaultCookieAttributes: {
       httpOnly: true,
       sameSite: "none",
       secure: true,
     },
-    // uncomment crossSubDomainCookies setting when ready to deploy and replace <your-workers-subdomain> with your actual workers subdomain
-    // https://developers.cloudflare.com/workers/wrangler/configuration/#workersdev
-    // crossSubDomainCookies: {
-    //   enabled: true,
-    //   domain: "<your-workers-subdomain>",
-    // },
   },
   baseURL: env.BETTER_AUTH_URL,
   database: drizzleAdapter(db, {

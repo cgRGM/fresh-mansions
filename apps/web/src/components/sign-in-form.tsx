@@ -1,7 +1,6 @@
 import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
 import { Label } from "@fresh-mansions/ui/components/label";
-import { useNavigate } from "@tanstack/react-router";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
@@ -31,9 +30,6 @@ const SignInForm = ({
   showSwitchLink?: boolean;
   subhead?: string;
 }) => {
-  const navigate = useNavigate({
-    from: "/",
-  });
   const { isPending } = authClient.useSession();
   const [formValues, setFormValues] = useState({
     email: "",
@@ -87,17 +83,15 @@ const SignInForm = ({
             toast.error(error.error.message || error.error.statusText);
           },
           onSuccess: () => {
-            navigate({
-              to: redirectTo,
-            });
             toast.success("Sign in successful");
+            window.location.assign(redirectTo);
           },
         }
       );
 
       setIsSubmitting(false);
     },
-    [formValues, navigate, redirectTo]
+    [formValues, redirectTo]
   );
 
   if (isPending) {

@@ -14,7 +14,8 @@ import integrationsRoutes from "./routes/integrations";
 import propertiesRoutes from "./routes/properties";
 import quotesRoutes from "./routes/quotes";
 
-const LOCAL_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/;
+const LOCAL_ORIGIN_PATTERN =
+  /^https?:\/\/(?:[a-z0-9-]+\.)*(localhost|127\.0\.0\.1)(:\d+)?$/i;
 
 export const app = new Hono<AppHonoContext>();
 

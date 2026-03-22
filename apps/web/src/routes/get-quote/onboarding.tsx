@@ -2,12 +2,7 @@ import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
 import { Label } from "@fresh-mansions/ui/components/label";
 import { Textarea } from "@fresh-mansions/ui/components/textarea";
-import {
-  createFileRoute,
-  getRouteApi,
-  redirect,
-  useNavigate,
-} from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, redirect } from "@tanstack/react-router";
 import { ImagePlus, UploadCloud } from "lucide-react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useState } from "react";
@@ -69,6 +64,13 @@ const propertySizeOptions = [
   { label: "X-Large", value: "xlarge" },
 ] as const;
 const onboardingRouteApi = getRouteApi("/get-quote/onboarding");
+const buildDashboardUrl = (quoteId: string): string => {
+  const params = new URLSearchParams({
+    quoteId,
+  });
+
+  return `/app/dashboard?${params.toString()}`;
+};
 
 const uploadQuotePhotos = async (
   files: File[],
@@ -96,7 +98,6 @@ const uploadQuotePhotos = async (
 };
 
 const OnboardingStep = () => {
-  const navigate = useNavigate();
   const search = onboardingRouteApi.useSearch();
   const [files, setFiles] = useState<File[]>([]);
   const [validatedAddress, setValidatedAddress] = useState<null | {
@@ -274,12 +275,7 @@ const OnboardingStep = () => {
         await uploadQuotePhotos(files, result.quoteId);
 
         toast.success("Estimate visit requested");
-        navigate({
-          search: {
-            quoteId: result.quoteId,
-          },
-          to: "/app/dashboard",
-        });
+        window.location.assign(buildDashboardUrl(result.quoteId));
       } catch {
         toast.error("Failed to submit estimate request");
       } finally {
@@ -289,7 +285,6 @@ const OnboardingStep = () => {
     [
       files,
       formValues,
-      navigate,
       search.endDate,
       search.phone,
       search.preferredVisitTime,

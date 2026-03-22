@@ -2,12 +2,7 @@ import { scheduleSearchSchema } from "@fresh-mansions/db/validators";
 import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
 import { Label } from "@fresh-mansions/ui/components/label";
-import {
-  createFileRoute,
-  getRouteApi,
-  Link,
-  useNavigate,
-} from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
@@ -22,9 +17,23 @@ const loginSchema = zod.object({
 });
 
 const loginRouteApi = getRouteApi("/get-quote/login");
+const buildQuoteStepUrl = (
+  pathname: string,
+  search: Record<string, string | undefined>
+): string => {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(search)) {
+    if (value) {
+      params.set(key, value);
+    }
+  }
+
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
+};
 
 const LoginStep = () => {
-  const navigate = useNavigate();
   const search = loginRouteApi.useSearch();
   const [formValues, setFormValues] = useState({
     email: "",
@@ -76,17 +85,16 @@ const LoginStep = () => {
           return;
         }
 
-        navigate({
-          search,
-          to: "/get-quote/onboarding",
-        });
+        window.location.assign(
+          buildQuoteStepUrl("/get-quote/onboarding", search)
+        );
       } catch {
         toast.error("An unexpected error occurred");
       } finally {
         setIsSubmitting(false);
       }
     },
-    [formValues, navigate, search]
+    [formValues, search]
   );
 
   return (
