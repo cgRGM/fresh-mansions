@@ -106,7 +106,7 @@ export const web = await TanStackStart("web", {
   adopt: true,
   bindings: webBindings,
   cwd: "../../apps/web",
-  delete: false,
+  name: "lawnapp-web",
 });
 
 export const server = await Worker("server", {
@@ -114,11 +114,11 @@ export const server = await Worker("server", {
   bindings: serverBindings,
   compatibility: "node",
   cwd: "../../apps/server",
-  delete: false,
   dev: {
     port: 3000,
   },
   entrypoint: "src/index.ts",
+  name: "lawnapp-server",
 });
 
 console.log(`Web    -> ${web.url}`);
