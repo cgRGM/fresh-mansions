@@ -1,3 +1,4 @@
+import { hashPassword } from "@fresh-mansions/auth/password";
 import { db } from "@fresh-mansions/db";
 import { account, user } from "@fresh-mansions/db/schema/auth";
 import {
@@ -22,7 +23,6 @@ import {
   workOrderAssignmentSchema,
 } from "@fresh-mansions/db/validators";
 import { env } from "@fresh-mansions/env/server";
-import { hashPassword } from "better-auth/crypto";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 

@@ -1,9 +1,9 @@
+import { hashPassword } from "@fresh-mansions/auth/password";
 import { db } from "@fresh-mansions/db";
 import { account, user } from "@fresh-mansions/db/schema/auth";
 import { customer, property } from "@fresh-mansions/db/schema/domain";
 import { customerBackfillSchema } from "@fresh-mansions/db/validators";
 import { createServerFn } from "@tanstack/react-start";
-import { hashPassword } from "better-auth/crypto";
 import { eq } from "drizzle-orm";
 
 import { authMiddleware } from "@/middleware/auth";

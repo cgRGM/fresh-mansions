@@ -7,6 +7,8 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import StripeSdk from "stripe";
 
+import { hashPassword, verifyPassword } from "./password";
+
 const LOCAL_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/;
 const isDevelopment = process.env.NODE_ENV === "development";
 const stripeClient = env.STRIPE_SECRET_KEY
@@ -56,6 +58,10 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    password: {
+      hash: hashPassword,
+      verify: verifyPassword,
+    },
   },
   plugins: authPlugins,
   secret: env.BETTER_AUTH_SECRET,
