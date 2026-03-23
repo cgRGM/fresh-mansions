@@ -13,6 +13,9 @@ export default defineConfig({
     viteReact(),
     alchemy(),
   ],
+  resolve: {
+    dedupe: ["react", "react-dom", "@tanstack/react-router"],
+  },
   server: {
     port: 3001,
   },
