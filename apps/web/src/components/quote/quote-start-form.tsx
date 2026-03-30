@@ -43,12 +43,12 @@ export const QuoteStartForm = ({
   className,
   ctaLabel = "Book an estimate visit",
   helperTone = "dark",
-  submitTo = "/get-quote/signup",
+  submitTo = "/get-quote/onboarding",
 }: {
   className?: string;
   ctaLabel?: string;
   helperTone?: "dark" | "light";
-  submitTo?: "/get-quote/signup";
+  submitTo?: "/get-quote/onboarding";
 }) => {
   const navigate = useNavigate();
   const [values, setValues] = useState<QuoteStartValues>(getDefaultWindow);

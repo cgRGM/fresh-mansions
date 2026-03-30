@@ -2,17 +2,21 @@ import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
 import { Label } from "@fresh-mansions/ui/components/label";
 import { Textarea } from "@fresh-mansions/ui/components/textarea";
-import { createFileRoute, getRouteApi, redirect } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  getRouteApi,
+  useNavigate,
+} from "@tanstack/react-router";
 import { ImagePlus, UploadCloud } from "lucide-react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import * as zod from "zod";
 
+import { useQuoteFlow } from "@/components/quote/quote-flow-context";
 import { QuoteStepLayout } from "@/components/quote/quote-step-layout";
-import { getUser } from "@/functions/get-user";
 import { validateAddress } from "@/functions/validate-address";
-import { apiClient, getQuotePhotosUploadUrl } from "@/lib/api-client";
+import { saveQuoteDraft } from "@/lib/quote-draft";
 
 const onboardingSearchSchema = zod.object({
   endDate: zod.string(),
@@ -64,42 +68,12 @@ const propertySizeOptions = [
   { label: "X-Large", value: "xlarge" },
 ] as const;
 const onboardingRouteApi = getRouteApi("/get-quote/onboarding");
-const buildDashboardUrl = (quoteId: string): string => {
-  const params = new URLSearchParams({
-    quoteId,
-  });
-
-  return `/app/dashboard?${params.toString()}`;
-};
-
-const uploadQuotePhotos = async (
-  files: File[],
-  quoteId: string
-): Promise<void> => {
-  if (files.length === 0) {
-    return;
-  }
-
-  const formData = new FormData();
-
-  for (const file of files) {
-    formData.append("photos", file);
-  }
-
-  const response = await fetch(getQuotePhotosUploadUrl(quoteId), {
-    body: formData,
-    credentials: "include",
-    method: "POST",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to upload photos");
-  }
-};
 
 const OnboardingStep = () => {
+  const navigate = useNavigate();
   const search = onboardingRouteApi.useSearch();
-  const [files, setFiles] = useState<File[]>([]);
+  const { setFiles } = useQuoteFlow();
+  const [files, setLocalFiles] = useState<File[]>([]);
   const [validatedAddress, setValidatedAddress] = useState<null | {
     city: string;
     formattedAddress: string;
@@ -154,7 +128,7 @@ const OnboardingStep = () => {
 
   const handleFileChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
-      setFiles([...(event.target.files ?? [])]);
+      setLocalFiles([...(event.target.files ?? [])]);
     },
     []
   );
@@ -208,7 +182,7 @@ const OnboardingStep = () => {
   }, [formValues]);
 
   const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
+    (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
 
       const parsed = onboardingSchema.safeParse(formValues);
@@ -233,70 +207,55 @@ const OnboardingStep = () => {
       setIsSubmitting(true);
 
       try {
-        const response = await apiClient.api.quotes.$post({
-          json: {
-            addressLine2: parsed.data.addressLine2 || undefined,
-            city: parsed.data.city,
-            endDate: search.endDate,
-            formattedAddress: validatedAddress.formattedAddress,
-            latitude: validatedAddress.latitude,
-            longitude: validatedAddress.longitude,
-            nickname: parsed.data.nickname || undefined,
-            notes: parsed.data.notes || undefined,
-            phone: search.phone || undefined,
-            preferredVisitTime: search.preferredVisitTime,
-            propertySize: parsed.data.propertySize
-              ? (parsed.data.propertySize as
-                  | "large"
-                  | "medium"
-                  | "small"
-                  | "xlarge")
-              : undefined,
-            radarMetadata: validatedAddress.radarMetadata,
-            radarPlaceId: validatedAddress.radarPlaceId,
-            serviceType: parsed.data.serviceType as
-              | "cleanup"
-              | "fertilization"
-              | "landscaping"
-              | "mowing",
-            startDate: search.startDate,
-            state: parsed.data.state,
-            street: parsed.data.street,
-            validationStatus: validatedAddress.validationStatus,
-            zip: parsed.data.zip,
-          },
+        saveQuoteDraft({
+          addressLine2: parsed.data.addressLine2 || undefined,
+          city: parsed.data.city,
+          endDate: search.endDate,
+          formattedAddress: validatedAddress.formattedAddress,
+          latitude: validatedAddress.latitude,
+          longitude: validatedAddress.longitude,
+          nickname: parsed.data.nickname || undefined,
+          notes: parsed.data.notes || undefined,
+          phone: search.phone || undefined,
+          preferredVisitTime: search.preferredVisitTime,
+          propertySize: parsed.data.propertySize
+            ? (parsed.data.propertySize as
+                | "large"
+                | "medium"
+                | "small"
+                | "xlarge")
+            : undefined,
+          radarMetadata: validatedAddress.radarMetadata,
+          radarPlaceId: validatedAddress.radarPlaceId,
+          serviceType: parsed.data.serviceType as
+            | "cleanup"
+            | "fertilization"
+            | "landscaping"
+            | "mowing",
+          startDate: search.startDate,
+          state: parsed.data.state,
+          street: parsed.data.street,
+          validationStatus: validatedAddress.validationStatus,
+          zip: parsed.data.zip,
         });
-
-        if (!response.ok) {
-          throw new Error("Failed to create estimate request");
-        }
-
-        const result = await response.json();
-        await uploadQuotePhotos(files, result.quoteId);
-
-        toast.success("Estimate visit requested");
-        window.location.assign(buildDashboardUrl(result.quoteId));
+        setFiles(files);
+        navigate({
+          search,
+          to: "/get-quote/signup",
+        });
       } catch {
-        toast.error("Failed to submit estimate request");
+        toast.error("Failed to save estimate details");
       } finally {
         setIsSubmitting(false);
       }
     },
-    [
-      files,
-      formValues,
-      search.endDate,
-      search.phone,
-      search.preferredVisitTime,
-      search.startDate,
-      validatedAddress,
-    ]
+    [files, formValues, navigate, search, validatedAddress, setFiles]
   );
 
   return (
     <QuoteStepLayout
-      description="Add your address, describe the work you need, and share any photos that help our team prepare for the visit."
-      step="Step 3 of 3"
+      description="Add your address, describe the work you need, and share any photos that help our team prepare for the visit. We'll create your account on the next step."
+      step="Step 2 of 3"
       title="Tell us about your property."
     >
       <div className="rounded-[2rem] border border-white/10 bg-[#f6f4ef] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.20)] sm:p-8">
@@ -553,7 +512,7 @@ const OnboardingStep = () => {
             disabled={isSubmitting}
             type="submit"
           >
-            {isSubmitting ? "Submitting request..." : "Submit estimate request"}
+            {isSubmitting ? "Saving details..." : "Continue to account"}
           </Button>
         </form>
       </div>
@@ -562,16 +521,6 @@ const OnboardingStep = () => {
 };
 
 export const Route = createFileRoute("/get-quote/onboarding")({
-  beforeLoad: async ({ search }) => {
-    const user = await getUser();
-
-    if (!user) {
-      throw redirect({
-        search,
-        to: "/get-quote/login",
-      });
-    }
-  },
   component: OnboardingStep,
   validateSearch: onboardingSearchSchema,
 });

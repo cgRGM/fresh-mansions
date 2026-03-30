@@ -8,8 +8,11 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import * as zod from "zod";
 
+import { useQuoteFlow } from "@/components/quote/quote-flow-context";
 import { QuoteStepLayout } from "@/components/quote/quote-step-layout";
 import { authClient } from "@/lib/auth-client";
+import { clearQuoteDraft, loadQuoteDraft } from "@/lib/quote-draft";
+import { submitQuoteDraft } from "@/lib/quote-submission";
 
 const loginSchema = zod.object({
   email: zod.string().email("Enter a valid email"),
@@ -35,6 +38,7 @@ const buildQuoteStepUrl = (
 
 const LoginStep = () => {
   const search = loginRouteApi.useSearch();
+  const { clearFiles, files } = useQuoteFlow();
   const [formValues, setFormValues] = useState({
     email: "",
     password: "",
@@ -75,6 +79,16 @@ const LoginStep = () => {
       setIsSubmitting(true);
 
       try {
+        const draft = loadQuoteDraft();
+
+        if (!draft) {
+          toast.error("Your estimate details expired. Start again below.");
+          window.location.assign(
+            buildQuoteStepUrl("/get-quote/onboarding", search)
+          );
+          return;
+        }
+
         const result = await authClient.signIn.email({
           email: parsed.data.email,
           password: parsed.data.password,
@@ -85,23 +99,26 @@ const LoginStep = () => {
           return;
         }
 
-        window.location.assign(
-          buildQuoteStepUrl("/get-quote/onboarding", search)
-        );
+        const quoteId = await submitQuoteDraft(draft, files);
+
+        clearQuoteDraft();
+        clearFiles();
+        toast.success("Estimate visit requested");
+        window.location.assign(`/app/dashboard?quoteId=${quoteId}`);
       } catch {
-        toast.error("An unexpected error occurred");
+        toast.error("We signed you in, but the quote was not submitted.");
       } finally {
         setIsSubmitting(false);
       }
     },
-    [formValues, search]
+    [clearFiles, files, formValues, search]
   );
 
   return (
     <QuoteStepLayout
-      description="If you already have a FreshMansions account, sign in and we’ll take you straight into the property details for this estimate request."
-      step="Step 2 of 3"
-      title="Sign in and finish the request."
+      description="If you already have a FreshMansions account, sign in and we'll send this estimate request straight into your dashboard."
+      step="Step 3 of 3"
+      title="Sign in to submit the request."
     >
       <div className="rounded-[2rem] border border-white/10 bg-[#f6f4ef] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.20)] sm:p-8">
         <div className="mb-8">
@@ -155,7 +172,7 @@ const LoginStep = () => {
             disabled={isSubmitting}
             type="submit"
           >
-            {isSubmitting ? "Signing in..." : "Continue to property details"}
+            {isSubmitting ? "Signing in..." : "Sign in and request estimate"}
           </Button>
 
           <p className="text-center text-sm text-black/55">
