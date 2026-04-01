@@ -9,7 +9,21 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import appCss from "../index.css?url";
 
-export interface RouterAppContext {}
+export type RouterAppContext = Record<string, never>;
+
+const RootDocument = () => (
+  <html lang="en">
+    <head>
+      <HeadContent />
+    </head>
+    <body>
+      <Outlet />
+      <Toaster richColors />
+      <TanStackRouterDevtools position="bottom-left" />
+      <Scripts />
+    </body>
+  </html>
+);
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootDocument,
@@ -30,24 +44,8 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
         name: "viewport",
       },
       {
-        title: "FreshMansions - Professional Lawn Care",
+        title: "Third Time - Professional Lawn Care",
       },
     ],
   }),
 });
-
-function RootDocument() {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <Outlet />
-        <Toaster richColors />
-        <TanStackRouterDevtools position="bottom-left" />
-        <Scripts />
-      </body>
-    </html>
-  );
-}

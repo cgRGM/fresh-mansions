@@ -116,7 +116,7 @@ const LoginStep = () => {
 
   return (
     <QuoteStepLayout
-      description="If you already have a FreshMansions account, sign in and we'll send this estimate request straight into your dashboard."
+      description="If you already have a Third Time account, sign in and we'll send this estimate request straight into your dashboard."
       step="Step 3 of 3"
       title="Sign in to submit the request."
     >

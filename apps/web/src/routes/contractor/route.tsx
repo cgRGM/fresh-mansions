@@ -77,7 +77,7 @@ const ContractorLayout = () => {
         <div className="flex items-center gap-2">
           <Sprout className="h-5 w-5 text-[#d6f18b]" />
           <span className="text-lg font-bold tracking-[-0.04em]">
-            FM Contractor
+            TT Contractor
           </span>
         </div>
         <div className="w-9" />
@@ -98,7 +98,7 @@ const ContractorLayout = () => {
                 <div className="flex items-center gap-2.5">
                   <Sprout className="h-5 w-5 text-[#d6f18b]" />
                   <span className="text-lg font-bold tracking-[-0.04em]">
-                    FreshMansions
+                    Third Time
                   </span>
                 </div>
                 <div className="mt-2 flex items-center gap-2">
@@ -160,7 +160,7 @@ const ContractorLayout = () => {
           <div className="flex items-center gap-2.5">
             <Sprout className="h-5 w-5 text-[#d6f18b]" />
             <span className="text-xl font-bold tracking-[-0.05em]">
-              FM Contractor
+              TT Contractor
             </span>
           </div>
           <div className="mt-2 flex items-center gap-2">

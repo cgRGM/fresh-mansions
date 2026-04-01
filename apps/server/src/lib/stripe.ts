@@ -154,7 +154,7 @@ export const createStripeSubscription = async (input: {
 }): Promise<null | { priceId: string; subscriptionId: string }> => {
   const price = await stripeRequest<{ id: string }>("prices", {
     currency: "usd",
-    "product_data[name]": input.nickname ?? "FreshMansions service plan",
+    "product_data[name]": input.nickname ?? "Third Time service plan",
     "recurring[interval]": input.interval,
     "recurring[interval_count]": input.intervalCount,
     unit_amount: input.priceCents,

@@ -57,7 +57,7 @@ const testimonials = [
     location: "Harrisonburg",
     name: "Dana Pierce",
     quote:
-      "FreshMansions feels like a real operations team, not a generic booking form. I knew exactly what would happen next.",
+      "Third Time feels like a real operations team, not a generic booking form. I knew exactly what would happen next.",
   },
   {
     location: "Staunton",
@@ -104,7 +104,7 @@ const LandingPage = () => (
           className="text-xl font-semibold tracking-[-0.05em] text-black"
           to="/"
         >
-          FreshMansions
+          Third Time
         </Link>
         <nav className="hidden items-center gap-8 text-sm font-medium text-black/60 md:flex">
           <a href="#services">Services</a>

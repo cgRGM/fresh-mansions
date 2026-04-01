@@ -70,7 +70,7 @@ const reorderStopsSchema = z.object({
 
 const generateTemporaryPassword = (): string => {
   const segment = crypto.randomUUID().replaceAll("-", "").slice(0, 10);
-  return `Fresh-${segment}!`;
+  return `Third-${segment}!`;
 };
 
 const getStripeCustomerId = async (customerId: string) => {

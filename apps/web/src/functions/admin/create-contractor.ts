@@ -11,7 +11,7 @@ import { requireRoleMiddleware } from "@/middleware/roles";
 
 const generateTemporaryPassword = (): string => {
   const segment = crypto.randomUUID().replaceAll("-", "").slice(0, 10);
-  return `Fresh-${segment}!`;
+  return `Third-${segment}!`;
 };
 
 export const createContractor = createServerFn({ method: "POST" })

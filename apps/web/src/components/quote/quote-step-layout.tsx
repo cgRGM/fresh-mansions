@@ -30,7 +30,7 @@ export const QuoteStepLayout = ({
     <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-start">
       <div className="space-y-5">
         <p className="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-white/70">
-          FreshMansions estimate visit
+          Third Time estimate visit
         </p>
         <h1 className="max-w-xl text-4xl font-semibold tracking-[-0.06em] text-white sm:text-5xl">
           {title}
