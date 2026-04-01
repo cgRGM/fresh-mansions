@@ -5,6 +5,7 @@ import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router";
 import { ArrowRight, FileText, Plus } from "lucide-react";
 
 import { getQuotes } from "@/functions/get-quotes";
+import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
 import {
   formatQuoteWindow,
@@ -81,8 +82,7 @@ const QuotesListPage = () => {
                         </Badge>
                       </div>
                       <p className="text-sm text-black/58">
-                        {quote.property?.street}, {quote.property?.city},{" "}
-                        {quote.property?.state} {quote.property?.zip}
+                        {getPropertyDisplayAddress(quote.property)}
                       </p>
                       <div className="grid gap-2 text-sm text-black/58 sm:grid-cols-2">
                         <p>

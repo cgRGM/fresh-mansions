@@ -58,6 +58,7 @@ const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 const turnstileSecretKey = process.env.TURNSTILE_SECRET_KEY
   ? alchemy.secret(process.env.TURNSTILE_SECRET_KEY, "TURNSTILE_SECRET_KEY")
   : undefined;
+const radarPublishableKey = process.env.VITE_RADAR_PUBLISHABLE_KEY;
 const turnstileSiteKey = process.env.VITE_TURNSTILE_SITE_KEY;
 
 const db = await D1Database("database", {
@@ -80,6 +81,9 @@ const webBindings = {
   STORAGE: storage,
   VITE_SERVER_URL: viteServerUrl,
   ...(radarSecretKey ? { RADAR_SECRET_KEY: radarSecretKey } : {}),
+  ...(radarPublishableKey
+    ? { VITE_RADAR_PUBLISHABLE_KEY: radarPublishableKey }
+    : {}),
   ...(stripeSecretKey ? { STRIPE_SECRET_KEY: stripeSecretKey } : {}),
   ...(stripeWebhookSecret
     ? { STRIPE_WEBHOOK_SECRET: stripeWebhookSecret }

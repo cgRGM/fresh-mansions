@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { getQuoteDetail } from "@/functions/get-quote-detail";
+import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
 import {
   formatQuoteWindow,
@@ -76,11 +77,7 @@ const QuoteDetailPage = () => {
               </h2>
             </div>
             <p className="text-base font-medium text-black">
-              {quote.property?.street}
-            </p>
-            <p className="mt-1 text-sm text-black/58">
-              {quote.property?.city}, {quote.property?.state}{" "}
-              {quote.property?.zip}
+              {getPropertyDisplayAddress(quote.property)}
             </p>
             {quote.property?.nickname ? (
               <p className="mt-3 text-sm text-black/58">

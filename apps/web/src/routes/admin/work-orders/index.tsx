@@ -10,7 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@fresh-mansions/ui/components/table";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import type { ChangeEvent, MouseEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -18,15 +19,9 @@ import { assignWorkOrder } from "@/functions/admin/assign-work-order";
 import { listContractors } from "@/functions/admin/list-contractors";
 import { listRoutes } from "@/functions/admin/list-routes";
 import { listWorkOrders } from "@/functions/admin/list-work-orders";
+import { getPropertyDisplayAddress } from "@/lib/address";
 
-export const Route = createFileRoute("/admin/work-orders/")({
-  component: AdminWorkOrdersPage,
-  loader: async () => ({
-    contractors: await listContractors(),
-    routes: await listRoutes(),
-    workOrders: await listWorkOrders(),
-  }),
-});
+const adminWorkOrdersRouteApi = getRouteApi("/admin/work-orders/");
 
 const statusTone = (value: string) => {
   switch (value) {
@@ -45,8 +40,9 @@ const statusTone = (value: string) => {
   }
 };
 
-function AdminWorkOrdersPage() {
-  const { contractors, routes, workOrders } = Route.useLoaderData();
+const AdminWorkOrdersPage = () => {
+  const { contractors, routes, workOrders } =
+    adminWorkOrdersRouteApi.useLoaderData();
   const [selectedContractors, setSelectedContractors] = useState<
     Record<string, string>
   >({});
@@ -95,6 +91,67 @@ function AdminWorkOrdersPage() {
     [scheduledDates, selectedContractors, selectedRoutes]
   );
 
+  const handleContractorChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      const { workOrderId } = event.currentTarget.dataset;
+
+      if (!workOrderId) {
+        return;
+      }
+
+      setSelectedContractors((current) => ({
+        ...current,
+        [workOrderId]: event.target.value,
+      }));
+    },
+    []
+  );
+
+  const handleRouteChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      const { workOrderId } = event.currentTarget.dataset;
+
+      if (!workOrderId) {
+        return;
+      }
+
+      setSelectedRoutes((current) => ({
+        ...current,
+        [workOrderId]: event.target.value,
+      }));
+    },
+    []
+  );
+
+  const handleScheduledDateChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const { workOrderId } = event.currentTarget.dataset;
+
+      if (!workOrderId) {
+        return;
+      }
+
+      setScheduledDates((current) => ({
+        ...current,
+        [workOrderId]: event.target.value,
+      }));
+    },
+    []
+  );
+
+  const handleAssignClick = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      const { workOrderId } = event.currentTarget.dataset;
+
+      if (!workOrderId) {
+        return;
+      }
+
+      handleAssign(workOrderId);
+    },
+    [handleAssign]
+  );
+
   return (
     <div className="space-y-6">
       <section className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
@@ -126,7 +183,7 @@ function AdminWorkOrdersPage() {
                   <div>
                     <p>{workOrder.quote?.customer?.user?.name ?? "Unknown"}</p>
                     <p className="text-xs text-black/50">
-                      {workOrder.quote?.property?.street ?? "No property"}
+                      {getPropertyDisplayAddress(workOrder.quote?.property)}
                     </p>
                   </div>
                 </TableCell>
@@ -139,12 +196,8 @@ function AdminWorkOrdersPage() {
                 <TableCell>
                   <select
                     className="h-10 rounded-xl border border-black/10 bg-white px-3 text-sm"
-                    onChange={(event) =>
-                      setSelectedContractors((current) => ({
-                        ...current,
-                        [workOrder.id]: event.target.value,
-                      }))
-                    }
+                    data-work-order-id={workOrder.id}
+                    onChange={handleContractorChange}
                     value={
                       selectedContractors[workOrder.id] ??
                       workOrder.contractorId ??
@@ -162,12 +215,8 @@ function AdminWorkOrdersPage() {
                 <TableCell>
                   <select
                     className="h-10 rounded-xl border border-black/10 bg-white px-3 text-sm"
-                    onChange={(event) =>
-                      setSelectedRoutes((current) => ({
-                        ...current,
-                        [workOrder.id]: event.target.value,
-                      }))
-                    }
+                    data-work-order-id={workOrder.id}
+                    onChange={handleRouteChange}
                     value={selectedRoutes[workOrder.id] ?? ""}
                   >
                     <option value="">No route</option>
@@ -188,13 +237,9 @@ function AdminWorkOrdersPage() {
                     </Label>
                     <Input
                       className="h-10 rounded-xl border-black/10"
+                      data-work-order-id={workOrder.id}
                       id={`scheduled-${workOrder.id}`}
-                      onChange={(event) =>
-                        setScheduledDates((current) => ({
-                          ...current,
-                          [workOrder.id]: event.target.value,
-                        }))
-                      }
+                      onChange={handleScheduledDateChange}
                       type="date"
                       value={
                         scheduledDates[workOrder.id] ??
@@ -207,7 +252,8 @@ function AdminWorkOrdersPage() {
                 <TableCell>
                   <Button
                     className="h-10 rounded-full bg-black px-4 text-white hover:bg-black/90"
-                    onClick={() => handleAssign(workOrder.id)}
+                    data-work-order-id={workOrder.id}
+                    onClick={handleAssignClick}
                     type="button"
                   >
                     Assign
@@ -220,4 +266,13 @@ function AdminWorkOrdersPage() {
       </section>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/admin/work-orders/")({
+  component: AdminWorkOrdersPage,
+  loader: async () => ({
+    contractors: await listContractors(),
+    routes: await listRoutes(),
+    workOrders: await listWorkOrders(),
+  }),
+});

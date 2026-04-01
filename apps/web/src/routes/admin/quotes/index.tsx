@@ -17,6 +17,7 @@ import type { ChangeEvent, MouseEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
 
 import { listQuotes } from "@/functions/admin/list-quotes";
+import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
 import {
   formatQuoteWindow,
@@ -86,8 +87,7 @@ const AdminQuotesPage = () => {
         const searchableContent = [
           quote.customer?.user?.name,
           quote.customer?.user?.email,
-          quote.property?.street,
-          quote.property?.city,
+          quote.property?.fullAddress,
           quote.serviceType,
         ]
           .filter(Boolean)
@@ -186,9 +186,7 @@ const AdminQuotesPage = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {quote.property
-                        ? `${quote.property.street}, ${quote.property.city}`
-                        : "No address"}
+                      {getPropertyDisplayAddress(quote.property)}
                     </TableCell>
                     <TableCell>
                       {formatQuoteWindow(

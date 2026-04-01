@@ -1,9 +1,10 @@
 import { db } from "@fresh-mansions/db";
-import { customer, quote } from "@fresh-mansions/db/schema/domain";
+import { quote } from "@fresh-mansions/db/schema/domain";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { withPropertyFullAddress } from "@/lib/quote-records";
 import { authMiddleware } from "@/middleware/auth";
 
 export const getQuoteDetail = createServerFn({ method: "GET" })
@@ -28,5 +29,5 @@ export const getQuoteDetail = createServerFn({ method: "GET" })
       return null;
     }
 
-    return quoteRecord;
+    return withPropertyFullAddress(quoteRecord);
   });

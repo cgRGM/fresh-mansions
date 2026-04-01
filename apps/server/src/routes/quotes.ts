@@ -1,4 +1,5 @@
 import { db } from "@fresh-mansions/db";
+import { buildFullAddress } from "@fresh-mansions/db/address";
 import {
   customer,
   property,
@@ -11,6 +12,7 @@ import { env } from "@fresh-mansions/env/server";
 import { and, eq } from "drizzle-orm";
 
 import { createApp, requireSession } from "../lib/hono";
+import { withPropertyFullAddress } from "../lib/quote-records";
 import { requireAuth } from "../middleware/auth";
 
 const app = createApp();
@@ -41,7 +43,7 @@ const getAuthorizedQuote = async ({
   }
 
   if (session.appUser.role === "admin") {
-    return quoteRecord;
+    return withPropertyFullAddress(quoteRecord);
   }
 
   if (
@@ -51,7 +53,7 @@ const getAuthorizedQuote = async ({
     return null;
   }
 
-  return quoteRecord;
+  return withPropertyFullAddress(quoteRecord);
 };
 
 const isFileEntry = (entry: File | string): entry is File =>
@@ -84,7 +86,11 @@ app.get("/", async (c) => {
     },
   });
 
-  return c.json({ quotes: customerRecord?.quotes ?? [] });
+  return c.json({
+    quotes: (customerRecord?.quotes ?? []).map((quoteRecord) =>
+      withPropertyFullAddress(quoteRecord)
+    ),
+  });
 });
 
 app.get("/:id", async (c) => {
@@ -122,12 +128,20 @@ app.post("/", async (c) => {
   }
 
   const propertyId = crypto.randomUUID();
+  const fullAddress = buildFullAddress({
+    addressLine2: body.addressLine2,
+    city: body.city,
+    formattedAddress: body.fullAddress || body.formattedAddress,
+    state: body.state,
+    street: body.street,
+    zip: body.zip,
+  });
   await db.insert(property).values({
     addressLine2: body.addressLine2 ?? null,
     addressValidationStatus: body.validationStatus,
     city: body.city,
     customerId,
-    formattedAddress: body.formattedAddress ?? null,
+    formattedAddress: fullAddress || body.formattedAddress || null,
     id: propertyId,
     latitude: body.latitude,
     longitude: body.longitude,
@@ -153,7 +167,7 @@ app.post("/", async (c) => {
     status: "requested",
   });
 
-  return c.json({ quoteId }, 201);
+  return c.json({ fullAddress, quoteId }, 201);
 });
 
 app.post("/:id/photos", async (c) => {

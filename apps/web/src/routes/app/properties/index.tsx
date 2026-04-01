@@ -6,18 +6,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@fresh-mansions/ui/components/card";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router";
 import { Home, MapPin } from "lucide-react";
 
 import { getProperties } from "@/functions/get-properties";
+import { getPropertyDisplayAddress } from "@/lib/address";
 
-export const Route = createFileRoute("/app/properties/")({
-  component: PropertiesListPage,
-  loader: () => getProperties(),
-});
+const propertiesRouteApi = getRouteApi("/app/properties/");
 
-function PropertiesListPage() {
-  const { properties } = Route.useLoaderData();
+const PropertiesListPage = () => {
+  const { properties } = propertiesRouteApi.useLoaderData();
 
   if (properties.length === 0) {
     return (
@@ -53,13 +51,13 @@ function PropertiesListPage() {
                 </CardTitle>
                 <CardDescription className="flex items-center gap-1">
                   <MapPin className="h-3 w-3" />
-                  {prop.street}, {prop.city}
+                  {getPropertyDisplayAddress(prop)}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Badge variant="secondary">
                   {prop.quotes?.length ?? 0} quote
-                  {(prop.quotes?.length ?? 0) !== 1 ? "s" : ""}
+                  {(prop.quotes?.length ?? 0) === 1 ? "" : "s"}
                 </Badge>
               </CardContent>
             </Card>
@@ -68,4 +66,9 @@ function PropertiesListPage() {
       </div>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/app/properties/")({
+  component: PropertiesListPage,
+  loader: () => getProperties(),
+});

@@ -3,6 +3,7 @@ import { contractor } from "@fresh-mansions/db/schema/domain";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 
+import { withQuotePropertyFullAddress } from "@/lib/quote-records";
 import { authMiddleware } from "@/middleware/auth";
 import { requireRoleMiddleware } from "@/middleware/roles";
 
@@ -53,7 +54,19 @@ export const getTodaysRoute = createServerFn({ method: "GET" })
     const routeRecord = contractorRecord?.routes[0] ?? null;
 
     return {
-      route: routeRecord,
-      stops: routeRecord?.stops ?? [],
+      route: routeRecord
+        ? {
+            ...routeRecord,
+            stops: routeRecord.stops.map((stop) => ({
+              ...stop,
+              workOrder: withQuotePropertyFullAddress(stop.workOrder),
+            })),
+          }
+        : null,
+      stops:
+        routeRecord?.stops.map((stop) => ({
+          ...stop,
+          workOrder: withQuotePropertyFullAddress(stop.workOrder),
+        })) ?? [],
     };
   });

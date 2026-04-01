@@ -1,15 +1,13 @@
 import { Badge } from "@fresh-mansions/ui/components/badge";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router";
 
 import { getTodaysRoute } from "@/functions/contractor/get-todays-route";
+import { getPropertyDisplayAddress } from "@/lib/address";
 
-export const Route = createFileRoute("/contractor/")({
-  component: ContractorDashboard,
-  loader: () => getTodaysRoute(),
-});
+const contractorRouteApi = getRouteApi("/contractor/");
 
-function ContractorDashboard() {
-  const { route, stops } = Route.useLoaderData();
+const ContractorDashboard = () => {
+  const { route, stops } = contractorRouteApi.useLoaderData();
 
   return (
     <div className="space-y-4">
@@ -43,7 +41,7 @@ function ContractorDashboard() {
                     "Unknown client"}
                 </p>
                 <p className="text-sm text-black/58">
-                  {stop.workOrder?.quote?.property?.street ?? "No property"}
+                  {getPropertyDisplayAddress(stop.workOrder?.quote?.property)}
                 </p>
               </div>
               <Badge className="bg-black text-white">{stop.status}</Badge>
@@ -53,4 +51,9 @@ function ContractorDashboard() {
       </section>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/contractor/")({
+  component: ContractorDashboard,
+  loader: () => getTodaysRoute(),
+});

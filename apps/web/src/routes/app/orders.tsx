@@ -1,15 +1,13 @@
 import { Badge } from "@fresh-mansions/ui/components/badge";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 
 import { getDashboard } from "@/functions/get-dashboard";
+import { getPropertyDisplayAddress } from "@/lib/address";
 
-export const Route = createFileRoute("/app/orders")({
-  component: OrdersPage,
-  loader: () => getDashboard(),
-});
+const ordersRouteApi = getRouteApi("/app/orders");
 
-function OrdersPage() {
-  const { orders } = Route.useLoaderData();
+const OrdersPage = () => {
+  const { orders } = ordersRouteApi.useLoaderData();
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4 md:p-8">
@@ -27,7 +25,7 @@ function OrdersPage() {
                 {order.quote?.serviceType ?? "Service"}
               </p>
               <p className="mt-1 text-sm text-black/58">
-                {order.quote?.property?.street ?? "No property address"}
+                {getPropertyDisplayAddress(order.quote?.property)}
               </p>
               <p className="text-sm text-black/58">
                 Crew: {order.contractor?.displayName ?? "Awaiting assignment"}
@@ -41,4 +39,9 @@ function OrdersPage() {
       ))}
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/app/orders")({
+  component: OrdersPage,
+  loader: () => getDashboard(),
+});

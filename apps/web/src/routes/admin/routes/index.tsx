@@ -1,7 +1,7 @@
 import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
 import { Label } from "@fresh-mansions/ui/components/label";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -11,18 +11,13 @@ import { createRouteRecord } from "@/functions/admin/create-route";
 import { listContractors } from "@/functions/admin/list-contractors";
 import { listRoutes } from "@/functions/admin/list-routes";
 import { listWorkOrders } from "@/functions/admin/list-work-orders";
+import { getPropertyDisplayAddress } from "@/lib/address";
 
-export const Route = createFileRoute("/admin/routes/")({
-  component: AdminRoutesPage,
-  loader: async () => ({
-    contractors: await listContractors(),
-    routes: await listRoutes(),
-    workOrders: await listWorkOrders(),
-  }),
-});
+const adminRoutesRouteApi = getRouteApi("/admin/routes/");
 
-function AdminRoutesPage() {
-  const { contractors, routes, workOrders } = Route.useLoaderData();
+const AdminRoutesPage = () => {
+  const { contractors, routes, workOrders } =
+    adminRoutesRouteApi.useLoaderData();
   const [routeForm, setRouteForm] = useState({
     contractorId: "",
     name: "",
@@ -275,7 +270,7 @@ function AdminRoutesPage() {
                       "Unknown client"}
                   </p>
                   <p className="text-sm text-black/58">
-                    {stop.workOrder?.quote?.property?.street ?? "No property"}
+                    {getPropertyDisplayAddress(stop.workOrder?.quote?.property)}
                   </p>
                 </div>
               ))}
@@ -285,4 +280,13 @@ function AdminRoutesPage() {
       </section>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/admin/routes/")({
+  component: AdminRoutesPage,
+  loader: async () => ({
+    contractors: await listContractors(),
+    routes: await listRoutes(),
+    workOrders: await listWorkOrders(),
+  }),
+});

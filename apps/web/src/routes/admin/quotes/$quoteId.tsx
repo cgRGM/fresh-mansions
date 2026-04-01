@@ -12,6 +12,7 @@ import { finalizeQuote } from "@/functions/admin/finalize-quote";
 import { getAdminQuoteDetail } from "@/functions/admin/get-quote-detail";
 import { scheduleVisit } from "@/functions/admin/schedule-visit";
 import { updateQuoteStatus } from "@/functions/admin/update-quote-status";
+import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
 import {
   formatQuoteWindow,
@@ -167,11 +168,7 @@ const AdminQuoteDetailPage = () => {
             </div>
             <div>
               <p className="font-medium text-black">
-                {quoteData.property?.street ?? "No property address"}
-              </p>
-              <p>
-                {quoteData.property?.city}, {quoteData.property?.state}{" "}
-                {quoteData.property?.zip}
+                {getPropertyDisplayAddress(quoteData.property)}
               </p>
               <p>Nickname: {quoteData.property?.nickname ?? "None"}</p>
             </div>

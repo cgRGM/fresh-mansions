@@ -3,6 +3,11 @@ import { customer, workOrder } from "@fresh-mansions/db/schema/domain";
 import { createServerFn } from "@tanstack/react-start";
 import { eq, inArray } from "drizzle-orm";
 
+import {
+  withPropertiesFullAddress,
+  withPropertyFullAddress,
+  withQuotePropertyFullAddress,
+} from "@/lib/quote-records";
 import { authMiddleware } from "@/middleware/auth";
 
 export const getDashboard = createServerFn({ method: "GET" })
@@ -40,11 +45,16 @@ export const getDashboard = createServerFn({ method: "GET" })
       },
     });
 
-    const quotes = customerRecord?.quotes ?? [];
-    const quoteIds = quotes.map((record) => record.id);
-    const properties = customerRecord?.properties ?? [];
+    const quoteRecords = customerRecord?.quotes ?? [];
+    const quoteIds = quoteRecords.map((record) => record.id);
+    const properties = withPropertiesFullAddress(
+      customerRecord?.properties ?? []
+    );
     const invoices = customerRecord?.invoices ?? [];
     const subscriptions = customerRecord?.subscriptions ?? [];
+    const quotes = quoteRecords.map((record) =>
+      withPropertyFullAddress(record)
+    );
     const orders =
       quoteIds.length > 0
         ? await db.query.workOrder.findMany({
@@ -64,7 +74,7 @@ export const getDashboard = createServerFn({ method: "GET" })
 
     return {
       invoices,
-      orders,
+      orders: orders.map((record) => withQuotePropertyFullAddress(record)),
       properties,
       quotes,
       subscriptions,

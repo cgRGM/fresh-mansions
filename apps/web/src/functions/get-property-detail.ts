@@ -1,9 +1,10 @@
 import { db } from "@fresh-mansions/db";
-import { customer, property } from "@fresh-mansions/db/schema/domain";
+import { property } from "@fresh-mansions/db/schema/domain";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { enrichPropertyWithFullAddress } from "@/lib/address";
 import { authMiddleware } from "@/middleware/auth";
 
 export const getPropertyDetail = createServerFn({ method: "GET" })
@@ -32,5 +33,5 @@ export const getPropertyDetail = createServerFn({ method: "GET" })
       return null;
     }
 
-    return propertyRecord;
+    return enrichPropertyWithFullAddress(propertyRecord);
   });

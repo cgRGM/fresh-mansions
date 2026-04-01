@@ -14,6 +14,7 @@ import {
 import * as zod from "zod";
 
 import { getDashboard } from "@/functions/get-dashboard";
+import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
 import {
   formatQuoteWindow,
@@ -225,7 +226,7 @@ const DashboardPage = () => {
                                 {quote.property?.nickname ?? quote.serviceType}
                               </p>
                               <p className="mt-1 text-sm text-black/58">
-                                {quote.property?.street}, {quote.property?.city}
+                                {getPropertyDisplayAddress(quote.property)}
                               </p>
                               <p className="mt-3 text-sm text-black/58">
                                 Window:{" "}
@@ -295,7 +296,7 @@ const DashboardPage = () => {
                                 {quote.serviceType}
                               </p>
                               <p className="mt-1 text-sm text-black/58">
-                                {quote.property?.street}, {quote.property?.city}
+                                {getPropertyDisplayAddress(quote.property)}
                               </p>
                               {hasEstimateRange ? (
                                 <p className="mt-3 text-sm font-medium text-black">
@@ -340,7 +341,7 @@ const DashboardPage = () => {
                       {property.nickname ?? "Property"}
                     </p>
                     <p className="mt-2 text-sm text-black/58">
-                      {property.street}
+                      {getPropertyDisplayAddress(property)}
                     </p>
                     <p className="text-sm text-black/58">
                       {property.city}, {property.state} {property.zip}

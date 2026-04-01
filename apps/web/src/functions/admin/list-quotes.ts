@@ -1,6 +1,7 @@
 import { db } from "@fresh-mansions/db";
 import { createServerFn } from "@tanstack/react-start";
 
+import { withPropertyFullAddress } from "@/lib/quote-records";
 import { authMiddleware } from "@/middleware/auth";
 import { requireRoleMiddleware } from "@/middleware/roles";
 
@@ -20,5 +21,5 @@ export const listQuotes = createServerFn({ method: "GET" })
       },
     });
 
-    return quoteRecords;
+    return quoteRecords.map((record) => withPropertyFullAddress(record));
   });

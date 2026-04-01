@@ -1,3 +1,4 @@
+import { buildFullAddress } from "@fresh-mansions/db/address";
 import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
 import { Label } from "@fresh-mansions/ui/components/label";
@@ -13,9 +14,10 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import * as zod from "zod";
 
+import { AddressAutocomplete } from "@/components/quote/address-autocomplete";
+import type { QuoteAddressSelection } from "@/components/quote/address-autocomplete";
 import { useQuoteFlow } from "@/components/quote/quote-flow-context";
 import { QuoteStepLayout } from "@/components/quote/quote-step-layout";
-import { validateAddress } from "@/functions/validate-address";
 import { saveQuoteDraft } from "@/lib/quote-draft";
 
 const onboardingSearchSchema = zod.object({
@@ -27,14 +29,10 @@ const onboardingSearchSchema = zod.object({
 
 const onboardingSchema = zod.object({
   addressLine2: zod.string().optional(),
-  city: zod.string().min(1, "City is required"),
   nickname: zod.string().optional(),
   notes: zod.string().optional(),
   propertySize: zod.string().optional(),
   serviceType: zod.string().min(1, "Choose a service type"),
-  state: zod.string().min(2, "State is required"),
-  street: zod.string().min(1, "Street address is required"),
-  zip: zod.string().min(5, "ZIP code is required"),
 });
 
 const serviceTypeOptions = [
@@ -74,33 +72,18 @@ const OnboardingStep = () => {
   const search = onboardingRouteApi.useSearch();
   const { setFiles } = useQuoteFlow();
   const [files, setLocalFiles] = useState<File[]>([]);
-  const [validatedAddress, setValidatedAddress] = useState<null | {
-    city: string;
-    formattedAddress: string;
-    latitude: number;
-    longitude: number;
-    radarMetadata?: Record<string, unknown>;
-    radarPlaceId?: string;
-    state: string;
-    street: string;
-    validationStatus: "validated";
-    zip: string;
-  }>(null);
+  const [selectedAddress, setSelectedAddress] =
+    useState<null | QuoteAddressSelection>(null);
   const [formValues, setFormValues] = useState({
     addressLine2: "",
-    city: "",
     nickname: "",
     notes: "",
     propertySize: "",
     serviceType: "",
-    state: "",
-    street: "",
-    zip: "",
   });
   const [errors, setErrors] = useState<
-    Partial<Record<keyof typeof formValues, string>>
+    Partial<Record<keyof typeof formValues, string>> & { address?: string }
   >({});
-  const [isValidatingAddress, setIsValidatingAddress] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = useCallback(
@@ -119,9 +102,6 @@ const OnboardingStep = () => {
         ...current,
         [name]: undefined,
       }));
-      if (["addressLine2", "city", "state", "street", "zip"].includes(name)) {
-        setValidatedAddress(null);
-      }
     },
     []
   );
@@ -133,53 +113,23 @@ const OnboardingStep = () => {
     []
   );
 
-  const handleValidateAddress = useCallback(async () => {
-    const parsed = onboardingSchema
-      .pick({
-        addressLine2: true,
-        city: true,
-        state: true,
-        street: true,
-        zip: true,
-      })
-      .safeParse(formValues);
+  const handleAddressLine2Change = useCallback((value: string) => {
+    setFormValues((current) => ({
+      ...current,
+      addressLine2: value,
+    }));
+  }, []);
 
-    if (!parsed.success) {
-      const { fieldErrors } = parsed.error.flatten();
+  const handleAddressSelectionChange = useCallback(
+    (address: null | QuoteAddressSelection) => {
+      setSelectedAddress(address);
       setErrors((current) => ({
         ...current,
-        city: fieldErrors.city?.[0] ?? current.city,
-        state: fieldErrors.state?.[0] ?? current.state,
-        street: fieldErrors.street?.[0] ?? current.street,
-        zip: fieldErrors.zip?.[0] ?? current.zip,
+        address: undefined,
       }));
-      return;
-    }
-
-    setIsValidatingAddress(true);
-
-    try {
-      const address = await validateAddress({
-        data: parsed.data,
-      });
-
-      setValidatedAddress(address);
-      setFormValues((current) => ({
-        ...current,
-        city: address.city,
-        state: address.state,
-        street: address.street,
-        zip: address.zip,
-      }));
-      toast.success("Address validated");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Unable to validate address"
-      );
-    } finally {
-      setIsValidatingAddress(false);
-    }
-  }, [formValues]);
+    },
+    []
+  );
 
   const handleSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
@@ -190,30 +140,36 @@ const OnboardingStep = () => {
       if (!parsed.success) {
         const { fieldErrors } = parsed.error.flatten();
         setErrors({
-          city: fieldErrors.city?.[0],
           serviceType: fieldErrors.serviceType?.[0],
-          state: fieldErrors.state?.[0],
-          street: fieldErrors.street?.[0],
-          zip: fieldErrors.zip?.[0],
         });
         return;
       }
 
-      if (!validatedAddress) {
-        toast.error("Validate the property address before submitting");
+      if (!selectedAddress) {
+        setErrors((current) => ({
+          ...current,
+          address: "Select a valid service address to continue",
+        }));
+        toast.error("Select a valid service address before continuing");
         return;
       }
 
       setIsSubmitting(true);
 
       try {
+        const fullAddress = buildFullAddress({
+          ...selectedAddress,
+          addressLine2: parsed.data.addressLine2,
+        });
+
         saveQuoteDraft({
           addressLine2: parsed.data.addressLine2 || undefined,
-          city: parsed.data.city,
+          city: selectedAddress.city,
           endDate: search.endDate,
-          formattedAddress: validatedAddress.formattedAddress,
-          latitude: validatedAddress.latitude,
-          longitude: validatedAddress.longitude,
+          formattedAddress: selectedAddress.formattedAddress,
+          fullAddress,
+          latitude: selectedAddress.latitude,
+          longitude: selectedAddress.longitude,
           nickname: parsed.data.nickname || undefined,
           notes: parsed.data.notes || undefined,
           phone: search.phone || undefined,
@@ -225,18 +181,18 @@ const OnboardingStep = () => {
                 | "small"
                 | "xlarge")
             : undefined,
-          radarMetadata: validatedAddress.radarMetadata,
-          radarPlaceId: validatedAddress.radarPlaceId,
+          radarMetadata: selectedAddress.radarMetadata,
+          radarPlaceId: selectedAddress.radarPlaceId,
           serviceType: parsed.data.serviceType as
             | "cleanup"
             | "fertilization"
             | "landscaping"
             | "mowing",
           startDate: search.startDate,
-          state: parsed.data.state,
-          street: parsed.data.street,
-          validationStatus: validatedAddress.validationStatus,
-          zip: parsed.data.zip,
+          state: selectedAddress.state,
+          street: selectedAddress.street,
+          validationStatus: "validated",
+          zip: selectedAddress.zip,
         });
         setFiles(files);
         navigate({
@@ -249,7 +205,7 @@ const OnboardingStep = () => {
         setIsSubmitting(false);
       }
     },
-    [files, formValues, navigate, search, validatedAddress, setFiles]
+    [files, formValues, navigate, search, selectedAddress, setFiles]
   );
 
   return (
@@ -270,114 +226,13 @@ const OnboardingStep = () => {
 
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="grid gap-4">
-            <div className="space-y-2">
-              <Label className="text-black/72" htmlFor="street">
-                Street Address
-              </Label>
-              <Input
-                className="h-12 rounded-2xl border-black/10 bg-white"
-                id="street"
-                name="street"
-                onChange={handleChange}
-                placeholder="123 Main Street"
-                value={formValues.street}
-              />
-              {errors.street ? (
-                <p className="text-sm text-rose-600">{errors.street}</p>
-              ) : null}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-black/72" htmlFor="addressLine2">
-                Address Line 2
-              </Label>
-              <Input
-                className="h-12 rounded-2xl border-black/10 bg-white"
-                id="addressLine2"
-                name="addressLine2"
-                onChange={handleChange}
-                placeholder="Suite, gate code, or unit"
-                value={formValues.addressLine2}
-              />
-            </div>
-
-            <div className="flex flex-col gap-3 rounded-[1.5rem] border border-black/8 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-medium text-black">
-                  Validate the service address with Radar
-                </p>
-                <p className="text-sm text-black/55">
-                  We use the normalized address and coordinates to set up
-                  routing later.
-                </p>
-                {validatedAddress ? (
-                  <p className="mt-2 text-sm text-[#4f7a1d]">
-                    Verified: {validatedAddress.formattedAddress}
-                  </p>
-                ) : null}
-              </div>
-              <Button
-                className="h-11 rounded-full bg-black px-5 text-white hover:bg-black/90"
-                disabled={isValidatingAddress}
-                onClick={handleValidateAddress}
-                type="button"
-              >
-                {isValidatingAddress ? "Validating..." : "Validate address"}
-              </Button>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-[1.2fr_0.8fr_0.8fr]">
-              <div className="space-y-2">
-                <Label className="text-black/72" htmlFor="city">
-                  City
-                </Label>
-                <Input
-                  className="h-12 rounded-2xl border-black/10 bg-white"
-                  id="city"
-                  name="city"
-                  onChange={handleChange}
-                  placeholder="Harrisonburg"
-                  value={formValues.city}
-                />
-                {errors.city ? (
-                  <p className="text-sm text-rose-600">{errors.city}</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-black/72" htmlFor="state">
-                  State
-                </Label>
-                <Input
-                  className="h-12 rounded-2xl border-black/10 bg-white"
-                  id="state"
-                  name="state"
-                  onChange={handleChange}
-                  placeholder="VA"
-                  value={formValues.state}
-                />
-                {errors.state ? (
-                  <p className="text-sm text-rose-600">{errors.state}</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-black/72" htmlFor="zip">
-                  ZIP
-                </Label>
-                <Input
-                  className="h-12 rounded-2xl border-black/10 bg-white"
-                  id="zip"
-                  name="zip"
-                  onChange={handleChange}
-                  placeholder="22801"
-                  value={formValues.zip}
-                />
-                {errors.zip ? (
-                  <p className="text-sm text-rose-600">{errors.zip}</p>
-                ) : null}
-              </div>
-            </div>
+            <AddressAutocomplete
+              addressError={errors.address}
+              addressLine2={formValues.addressLine2}
+              onAddressLine2Change={handleAddressLine2Change}
+              onSelectionChange={handleAddressSelectionChange}
+              selectedAddress={selectedAddress}
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

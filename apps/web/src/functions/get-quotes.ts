@@ -3,6 +3,7 @@ import { customer } from "@fresh-mansions/db/schema/domain";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 
+import { withPropertyFullAddress } from "@/lib/quote-records";
 import { authMiddleware } from "@/middleware/auth";
 
 export const getQuotes = createServerFn({ method: "GET" })
@@ -30,6 +31,8 @@ export const getQuotes = createServerFn({ method: "GET" })
     });
 
     return {
-      quotes: customerRecord?.quotes ?? [],
+      quotes: (customerRecord?.quotes ?? []).map((record) =>
+        withPropertyFullAddress(record)
+      ),
     };
   });

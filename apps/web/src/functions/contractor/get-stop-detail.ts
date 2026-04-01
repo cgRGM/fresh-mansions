@@ -4,6 +4,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { withQuotePropertyFullAddress } from "@/lib/quote-records";
 import { authMiddleware } from "@/middleware/auth";
 import { requireRoleMiddleware } from "@/middleware/roles";
 
@@ -41,5 +42,8 @@ export const getStopDetail = createServerFn({ method: "GET" })
       return null;
     }
 
-    return stop;
+    return {
+      ...stop,
+      workOrder: withQuotePropertyFullAddress(stop.workOrder),
+    };
   });

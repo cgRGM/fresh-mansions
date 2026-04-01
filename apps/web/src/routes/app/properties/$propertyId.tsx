@@ -12,6 +12,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Calendar, FileText, MapPin } from "lucide-react";
 
 import { getPropertyDetail } from "@/functions/get-property-detail";
+import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
 import { formatQuoteWindow, getQuoteStatusMeta } from "@/lib/quotes";
 
@@ -58,17 +59,15 @@ const PropertyDetailPage = () => {
           </CardTitle>
           <CardDescription className="flex items-center gap-1">
             <MapPin className="h-4 w-4" />
-            {property.street}, {property.city}, {property.state} {property.zip}
+            {getPropertyDisplayAddress(property)}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {property.city && (
+          {property.addressLine2 ? (
             <p className="text-sm text-gray-600">
-              {property.city}
-              {property.state && `, ${property.state}`}
-              {property.zip && ` ${property.zip}`}
+              {property.addressLine2}
             </p>
-          )}
+          ) : null}
         </CardContent>
       </Card>
 

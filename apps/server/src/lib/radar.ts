@@ -1,3 +1,4 @@
+import { buildFullAddress } from "@fresh-mansions/db/address";
 import { env } from "@fresh-mansions/env/server";
 
 interface RadarAddressInput {
@@ -10,6 +11,7 @@ interface RadarAddressInput {
 
 export type ValidatedAddress = RadarAddressInput & {
   formattedAddress: string;
+  fullAddress: string;
   latitude: number;
   longitude: number;
   radarMetadata?: Record<string, unknown>;
@@ -36,6 +38,10 @@ export const validateAddressWithRadar = async (
     return {
       ...input,
       formattedAddress,
+      fullAddress: buildFullAddress({
+        ...input,
+        formattedAddress,
+      }),
       latitude: 0,
       longitude: 0,
       validationStatus: "validated",
@@ -75,7 +81,7 @@ export const validateAddressWithRadar = async (
 
   const [longitude, latitude] = match.geometry.coordinates;
 
-  return {
+  const normalizedAddress = {
     addressLine2: input.addressLine2,
     city: match.city ?? input.city,
     formattedAddress: match.formattedAddress ?? formattedAddress,
@@ -85,7 +91,12 @@ export const validateAddressWithRadar = async (
     radarPlaceId: match.placeLabel,
     state: match.state ?? input.state,
     street: match.street ?? input.street,
-    validationStatus: "validated",
+    validationStatus: "validated" as const,
     zip: match.zipCode ?? input.zip,
+  };
+
+  return {
+    ...normalizedAddress,
+    fullAddress: buildFullAddress(normalizedAddress),
   };
 };

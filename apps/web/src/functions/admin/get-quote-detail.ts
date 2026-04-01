@@ -4,6 +4,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { withPropertyFullAddress } from "@/lib/quote-records";
 import { authMiddleware } from "@/middleware/auth";
 import { requireRoleMiddleware } from "@/middleware/roles";
 
@@ -25,5 +26,5 @@ export const getAdminQuoteDetail = createServerFn({ method: "GET" })
       },
     });
 
-    return result ?? null;
+    return result ? withPropertyFullAddress(result) : null;
   });

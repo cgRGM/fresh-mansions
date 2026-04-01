@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { completeStop } from "@/functions/contractor/complete-stop";
 import { getStopDetail } from "@/functions/contractor/get-stop-detail";
+import { getPropertyDisplayAddress } from "@/lib/address";
 
 export const Route = createFileRoute("/contractor/stops/$stopId")({
   component: StopDetail,
@@ -52,12 +53,7 @@ function StopDetail() {
         </p>
         <p className="mt-4 text-sm text-black/50">Property</p>
         <p className="text-lg font-medium text-black">
-          {stop.workOrder?.quote?.property?.street ?? "No property"}
-        </p>
-        <p className="text-sm text-black/58">
-          {stop.workOrder?.quote?.property?.city},{" "}
-          {stop.workOrder?.quote?.property?.state}{" "}
-          {stop.workOrder?.quote?.property?.zip}
+          {getPropertyDisplayAddress(stop.workOrder?.quote?.property)}
         </p>
       </div>
       <Button className="w-full gap-2" onClick={handleComplete}>
