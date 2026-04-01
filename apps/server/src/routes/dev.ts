@@ -66,9 +66,7 @@ app.post("/seed", async (c) => {
     },
     {
       customerId,
-      estimateHigh: 15_000,
-      estimateLow: 10_000,
-      finalizedAt: new Date("2026-03-12T16:15:00.000Z"),
+      finalPrice: 12_500,
       id: crypto.randomUUID(),
       notes: "Spring cleanup needed",
       preferredEndDate: "2026-04-10",
@@ -76,9 +74,11 @@ app.post("/seed", async (c) => {
       preferredVisitTime: "14:30",
       propertyId: prop2Id,
       propertySize: "small",
+      proposedWorkDate: "2026-04-14",
+      quotedAt: new Date("2026-03-12T16:15:00.000Z"),
       scheduledVisitAt: new Date("2026-03-10T16:00:00.000Z"),
       serviceType: "cleanup",
-      status: "quote_ready",
+      status: "quote_sent",
     },
   ]);
 

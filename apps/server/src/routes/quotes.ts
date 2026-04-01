@@ -5,11 +5,13 @@ import {
   property,
   quote,
   quotePhoto,
+  workOrder,
 } from "@fresh-mansions/db/schema/domain";
 import type { UserRole } from "@fresh-mansions/db/validators";
 import { quoteIntakeSchema } from "@fresh-mansions/db/validators";
 import { env } from "@fresh-mansions/env/server";
 import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 
 import { createApp, requireSession } from "../lib/hono";
 import { withPropertyFullAddress } from "../lib/quote-records";
@@ -18,6 +20,10 @@ import { requireAuth } from "../middleware/auth";
 const app = createApp();
 
 app.use("*", requireAuth);
+
+const quoteResponseSchema = z.object({
+  status: z.enum(["accepted", "rejected"]),
+});
 
 const getAuthorizedQuote = async ({
   quoteId,
@@ -42,7 +48,10 @@ const getAuthorizedQuote = async ({
     return null;
   }
 
-  if (session.appUser.role === "admin") {
+  if (
+    session.appUser.role === "admin" ||
+    session.appUser.role === "super_user"
+  ) {
     return withPropertyFullAddress(quoteRecord);
   }
 
@@ -168,6 +177,47 @@ app.post("/", async (c) => {
   });
 
   return c.json({ fullAddress, quoteId }, 201);
+});
+
+app.patch("/:id/respond", async (c) => {
+  const session = requireSession(c);
+  const quoteId = c.req.param("id");
+  const body = quoteResponseSchema.parse(await c.req.json());
+  const quoteRecord = await getAuthorizedQuote({
+    quoteId,
+    session,
+  });
+
+  if (!quoteRecord) {
+    return c.json({ error: "Not found" }, 404);
+  }
+
+  if (body.status === "accepted") {
+    const existingWorkOrder = await db.query.workOrder.findFirst({
+      where: eq(workOrder.quoteId, quoteId),
+    });
+
+    if (!existingWorkOrder) {
+      await db.insert(workOrder).values({
+        id: crypto.randomUUID(),
+        notes: quoteRecord.notes,
+        quoteId,
+        scheduledDate:
+          quoteRecord.proposedWorkDate ?? quoteRecord.preferredStartDate,
+        status: "pending",
+      });
+    }
+  }
+
+  const [updatedQuote] = await db
+    .update(quote)
+    .set({
+      status: body.status,
+    })
+    .where(eq(quote.id, quoteId))
+    .returning();
+
+  return c.json({ quote: updatedQuote });
 });
 
 app.post("/:id/photos", async (c) => {

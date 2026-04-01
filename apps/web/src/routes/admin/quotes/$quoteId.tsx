@@ -15,19 +15,17 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { convertToWorkOrder } from "@/functions/admin/convert-to-work-order";
-import { finalizeQuote } from "@/functions/admin/finalize-quote";
 import { getAdminQuoteDetail } from "@/functions/admin/get-quote-detail";
+import { sendQuote } from "@/functions/admin/finalize-quote";
 import { scheduleVisit } from "@/functions/admin/schedule-visit";
-import { updateQuoteStatus } from "@/functions/admin/update-quote-status";
 import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
 import {
+  formatServiceDate,
   formatQuoteWindow,
   formatVisitTime,
   getQuotePhotoUrl,
   getQuoteStatusMeta,
-  normalizeQuoteStatus,
 } from "@/lib/quotes";
 
 const toDateTimeLocal = (value?: Date | null): string => {
@@ -52,11 +50,11 @@ const AdminQuoteDetailPage = () => {
   const [scheduledVisitAt, setScheduledVisitAt] = useState(
     toDateTimeLocal(quoteData?.scheduledVisitAt)
   );
-  const [estimateLow, setEstimateLow] = useState(
-    quoteData?.estimateLow != null ? String(quoteData.estimateLow / 100) : ""
+  const [finalPrice, setFinalPrice] = useState(
+    quoteData?.finalPrice != null ? String(quoteData.finalPrice / 100) : ""
   );
-  const [estimateHigh, setEstimateHigh] = useState(
-    quoteData?.estimateHigh != null ? String(quoteData.estimateHigh / 100) : ""
+  const [proposedWorkDate, setProposedWorkDate] = useState(
+    quoteData?.proposedWorkDate ?? ""
   );
 
   if (!quoteData) {
@@ -67,18 +65,7 @@ const AdminQuoteDetailPage = () => {
     );
   }
 
-  const normalizedStatus = normalizeQuoteStatus(quoteData.status);
   const statusMeta = getQuoteStatusMeta(quoteData.status);
-
-  const handleStatusUpdate = async (status: "approved" | "rejected") => {
-    try {
-      await updateQuoteStatus({ data: { quoteId: quoteData.id, status } });
-      toast.success(`Quote marked ${status}`);
-      await router.invalidate();
-    } catch {
-      toast.error("Failed to update quote status");
-    }
-  };
 
   const handleSchedule = async () => {
     if (!scheduledVisitAt) {
@@ -100,37 +87,31 @@ const AdminQuoteDetailPage = () => {
     }
   };
 
-  const handleFinalize = async () => {
-    const low = Math.round(Number(estimateLow) * 100);
-    const high = Math.round(Number(estimateHigh) * 100);
+  const handleSendQuote = async () => {
+    const parsedFinalPrice = Math.round(Number(finalPrice) * 100);
 
-    if (Number.isNaN(low) || Number.isNaN(high)) {
-      toast.error("Enter both estimate values");
+    if (Number.isNaN(parsedFinalPrice) || parsedFinalPrice <= 0) {
+      toast.error("Enter the final quoted amount");
+      return;
+    }
+
+    if (!proposedWorkDate) {
+      toast.error("Choose the proposed work date");
       return;
     }
 
     try {
-      await finalizeQuote({
+      await sendQuote({
         data: {
-          estimateHigh: high,
-          estimateLow: low,
+          finalPrice: parsedFinalPrice,
+          proposedWorkDate,
           quoteId: quoteData.id,
         },
       });
-      toast.success("Quote finalized");
+      toast.success("Quote sent to customer");
       await router.invalidate();
     } catch {
-      toast.error("Failed to finalize the quote");
-    }
-  };
-
-  const handleConvertToWorkOrder = async () => {
-    try {
-      await convertToWorkOrder({ data: { quoteId: quoteData.id } });
-      toast.success("Work order created");
-      await router.invalidate();
-    } catch {
-      toast.error("Failed to convert this quote");
+      toast.error("Failed to send the quote");
     }
   };
 
@@ -238,25 +219,24 @@ const AdminQuoteDetailPage = () => {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="estimateLow">Estimate low</Label>
+                <Label htmlFor="finalPrice">Final quoted price</Label>
                 <Input
                   className="h-12 rounded-2xl border-black/10"
-                  id="estimateLow"
-                  onChange={(event) => setEstimateLow(event.target.value)}
+                  id="finalPrice"
+                  onChange={(event) => setFinalPrice(event.target.value)}
                   step="0.01"
                   type="number"
-                  value={estimateLow}
+                  value={finalPrice}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="estimateHigh">Estimate high</Label>
+                <Label htmlFor="proposedWorkDate">Proposed work date</Label>
                 <Input
                   className="h-12 rounded-2xl border-black/10"
-                  id="estimateHigh"
-                  onChange={(event) => setEstimateHigh(event.target.value)}
-                  step="0.01"
-                  type="number"
-                  value={estimateHigh}
+                  id="proposedWorkDate"
+                  onChange={(event) => setProposedWorkDate(event.target.value)}
+                  type="date"
+                  value={proposedWorkDate}
                 />
               </div>
             </div>
@@ -264,49 +244,25 @@ const AdminQuoteDetailPage = () => {
             <div className="flex flex-wrap gap-3">
               <Button
                 className="rounded-full bg-black text-white hover:bg-black/90"
-                onClick={handleFinalize}
+                onClick={handleSendQuote}
                 type="button"
               >
-                Finalize quote
+                Send fixed quote
               </Button>
-              {normalizedStatus === "quote_ready" ? (
-                <>
-                  <Button
-                    className="rounded-full bg-[#d6f18b] text-black hover:bg-[#c7e77b]"
-                    onClick={() => handleStatusUpdate("approved")}
-                    type="button"
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    className="rounded-full"
-                    onClick={() => handleStatusUpdate("rejected")}
-                    type="button"
-                    variant="destructive"
-                  >
-                    Reject
-                  </Button>
-                </>
-              ) : null}
-              {normalizedStatus === "approved" ? (
-                <Button
-                  className="rounded-full bg-black text-white hover:bg-black/90"
-                  onClick={handleConvertToWorkOrder}
-                  type="button"
-                >
-                  Convert to work order
-                </Button>
-              ) : null}
             </div>
 
             <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 text-sm text-black/55">
               <p>
-                Current estimate:{" "}
-                {quoteData.estimateLow != null && quoteData.estimateHigh != null
-                  ? `${formatCents(quoteData.estimateLow)} - ${formatCents(
-                      quoteData.estimateHigh
-                    )}`
-                  : "Not finalized"}
+                Current quote:{" "}
+                {quoteData.finalPrice != null
+                  ? formatCents(quoteData.finalPrice)
+                  : "Not sent yet"}
+              </p>
+              <p className="mt-1">
+                Proposed work date: {formatServiceDate(quoteData.proposedWorkDate)}
+              </p>
+              <p className="mt-1">
+                Customer status: {statusMeta.label}
               </p>
               <p className="mt-1">
                 Work orders created: {quoteData.workOrders.length}

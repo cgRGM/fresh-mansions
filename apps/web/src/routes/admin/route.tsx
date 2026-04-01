@@ -31,6 +31,14 @@ const navItems = [
   { href: "/admin/contractors", icon: HardHat, label: "Contractors" },
 ];
 
+const mobileLinks = [
+  { href: "/admin/quotes", icon: FileText, label: "Quotes" },
+  { href: "/admin/customers", icon: Users, label: "Clients" },
+  { href: "/admin/work-orders", icon: Wrench, label: "Dispatch" },
+  { href: "/admin/routes", icon: LayoutDashboard, label: "Routes" },
+  { href: "/admin/contractors", icon: HardHat, label: "Crews" },
+] as const;
+
 const adminRouteApi = getRouteApi("/admin");
 
 const AdminLayout = () => {
@@ -63,9 +71,7 @@ const AdminLayout = () => {
         </button>
         <div className="flex items-center gap-2">
           <Sprout className="h-5 w-5 text-[#d6f18b]" />
-          <span className="text-lg font-bold tracking-[-0.04em]">
-            FM Admin
-          </span>
+          <span className="text-lg font-bold tracking-[-0.04em]">FM Admin</span>
         </div>
         <div className="w-9" />
       </div>
@@ -166,11 +172,30 @@ const AdminLayout = () => {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
         <div className="mx-auto max-w-6xl p-4 md:p-6">
           <Outlet />
         </div>
       </main>
+
+      <nav
+        aria-label="Admin navigation"
+        className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/8 bg-[#0a1a10]/95 text-white backdrop-blur-lg md:hidden"
+      >
+        <div className="mx-auto flex max-w-lg items-center justify-around pb-[env(safe-area-inset-bottom)] pt-1">
+          {mobileLinks.map((link) => (
+            <Link
+              activeProps={{ className: "text-[#d6f18b]" }}
+              className="flex flex-col items-center gap-0.5 px-2 py-2 text-white/35 transition-colors"
+              key={link.href}
+              to={link.href}
+            >
+              <link.icon className="h-5 w-5" />
+              <span className="text-[10px] font-medium">{link.label}</span>
+            </Link>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 };

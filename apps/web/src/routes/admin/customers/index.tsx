@@ -18,14 +18,15 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/empty-state";
+import { AddressAutocomplete } from "@/components/quote/address-autocomplete";
+import type { QuoteAddressSelection } from "@/components/quote/address-autocomplete";
 import { createCustomerBackfill } from "@/functions/admin/create-customer-backfill";
-import { validateAddress } from "@/functions/validate-address";
 import { authMiddleware } from "@/middleware/auth";
 import { requireRoleMiddleware } from "@/middleware/roles";
 
 const listCustomers = createServerFn({ method: "GET" })
   .middleware([authMiddleware, requireRoleMiddleware("admin")])
-  .handler(async () =>
+  .handler(() =>
     db.query.customer.findMany({
       orderBy: (customerTable, { desc }) => [desc(customerTable.createdAt)],
       with: {
@@ -41,32 +42,17 @@ const adminCustomersRouteApi = getRouteApi("/admin/customers/");
 const AdminCustomersPage = () => {
   const customers = adminCustomersRouteApi.useLoaderData();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isValidatingAddress, setIsValidatingAddress] = useState(false);
   const [createdPassword, setCreatedPassword] = useState("");
   const [createdEmail, setCreatedEmail] = useState("");
-  const [saveUnverifiedAddress, setSaveUnverifiedAddress] = useState(false);
-  const [validatedAddress, setValidatedAddress] = useState<null | {
-    city: string;
-    formattedAddress: string;
-    latitude: number;
-    longitude: number;
-    radarMetadata?: Record<string, unknown>;
-    radarPlaceId?: string;
-    state: string;
-    street: string;
-    validationStatus: "validated";
-    zip: string;
-  }>(null);
+  const [addressError, setAddressError] = useState("");
+  const [validatedAddress, setValidatedAddress] =
+    useState<null | QuoteAddressSelection>(null);
   const [form, setForm] = useState({
     addressLine2: "",
-    city: "",
     email: "",
     name: "",
     nickname: "",
     phone: "",
-    state: "",
-    street: "",
-    zip: "",
   });
 
   const handleFormChange = useCallback(
@@ -77,52 +63,35 @@ const AdminCustomersPage = () => {
         ...current,
         [name]: value,
       }));
+    },
+    []
+  );
 
-      if (["addressLine2", "city", "state", "street", "zip"].includes(name)) {
-        setValidatedAddress(null);
+  const handleAddressSelectionChange = useCallback(
+    (selection: null | QuoteAddressSelection) => {
+      setValidatedAddress(selection);
+
+      if (selection) {
+        setAddressError("");
       }
     },
     []
   );
 
-  const handleValidateAddress = useCallback(async () => {
-    setIsValidatingAddress(true);
-
-    try {
-      const address = await validateAddress({
-        data: {
-          addressLine2: form.addressLine2 || undefined,
-          city: form.city,
-          state: form.state,
-          street: form.street,
-          zip: form.zip,
-        },
-      });
-
-      setValidatedAddress(address);
-      setForm((current) => ({
-        ...current,
-        city: address.city,
-        state: address.state,
-        street: address.street,
-        zip: address.zip,
-      }));
-      toast.success("Address validated");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Unable to validate address"
-      );
-    } finally {
-      setIsValidatingAddress(false);
-    }
-  }, [form.addressLine2, form.city, form.state, form.street, form.zip]);
+  const handleAddressLine2Change = useCallback((value: string) => {
+    setForm((current) => ({
+      ...current,
+      addressLine2: value,
+    }));
+  }, []);
 
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
 
-      if (!validatedAddress && !saveUnverifiedAddress && form.street) {
-        toast.error("Validate the address or mark it as unverified");
+      if (!validatedAddress) {
+        setAddressError("Select a validated property address to continue");
+        toast.error("Select a validated property address");
         return;
       }
 
@@ -132,14 +101,17 @@ const AdminCustomersPage = () => {
         const result = await createCustomerBackfill({
           data: {
             ...form,
-            formattedAddress: validatedAddress?.formattedAddress,
-            latitude: validatedAddress?.latitude,
-            longitude: validatedAddress?.longitude,
-            radarMetadata: validatedAddress?.radarMetadata,
-            radarPlaceId: validatedAddress?.radarPlaceId,
-            validationStatus:
-              validatedAddress?.validationStatus ??
-              (saveUnverifiedAddress ? "unverified" : "validated"),
+            city: validatedAddress.city,
+            formattedAddress: validatedAddress.formattedAddress,
+            fullAddress: validatedAddress.formattedAddress,
+            latitude: validatedAddress.latitude,
+            longitude: validatedAddress.longitude,
+            radarMetadata: validatedAddress.radarMetadata,
+            radarPlaceId: validatedAddress.radarPlaceId,
+            state: validatedAddress.state,
+            street: validatedAddress.street,
+            validationStatus: "validated",
+            zip: validatedAddress.zip,
           },
         });
         setCreatedEmail(form.email);
@@ -154,7 +126,7 @@ const AdminCustomersPage = () => {
         setIsSubmitting(false);
       }
     },
-    [form, saveUnverifiedAddress, validatedAddress]
+    [form, validatedAddress]
   );
 
   return (
@@ -183,11 +155,6 @@ const AdminCustomersPage = () => {
             ["email", "Email", "jordan@example.com"],
             ["phone", "Phone", "(555) 123-4567"],
             ["nickname", "Property nickname", "Main residence"],
-            ["addressLine2", "Address line 2", "Unit, suite, gate code"],
-            ["street", "Street", "123 Main Street"],
-            ["city", "City", "Harrisonburg"],
-            ["state", "State", "VA"],
-            ["zip", "ZIP", "22801"],
           ].map(([field, label, placeholder]) => (
             <div className="space-y-2" key={field}>
               <Label htmlFor={field}>{label}</Label>
@@ -203,38 +170,24 @@ const AdminCustomersPage = () => {
           ))}
 
           <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 lg:col-span-2">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="font-medium text-black">Address verification</p>
-                <p className="text-sm text-black/50">
-                  Validate new addresses when possible. Use the override only
-                  when importing legacy customer data that still needs cleanup.
-                </p>
-                {validatedAddress ? (
-                  <p className="mt-2 text-sm text-[#4f7a1d]">
-                    Verified: {validatedAddress.formattedAddress}
-                  </p>
-                ) : null}
-              </div>
-              <Button
-                className="h-11 rounded-full bg-black px-5 text-white hover:bg-black/90"
-                disabled={isValidatingAddress}
-                onClick={handleValidateAddress}
-                type="button"
-              >
-                {isValidatingAddress ? "Validating..." : "Validate address"}
-              </Button>
+            <div className="mb-4">
+              <p className="font-medium text-black">Property address</p>
+              <p className="text-sm text-black/50">
+                Search once, select the validated address, and we will carry the
+                full address through the customer record.
+              </p>
             </div>
-            <label className="mt-4 flex items-center gap-3 text-sm text-black/55">
-              <input
-                checked={saveUnverifiedAddress}
-                onChange={(event) =>
-                  setSaveUnverifiedAddress(event.target.checked)
-                }
-                type="checkbox"
-              />
-              Save as unverified legacy address if validation is unavailable
-            </label>
+            <AddressAutocomplete
+              addressError={addressError}
+              addressLine2={form.addressLine2}
+              addressLine2Label="Address Line 2"
+              addressPlaceholder="Suite, gate code, or unit"
+              label="Validated property address"
+              onAddressLine2Change={handleAddressLine2Change}
+              onSelectionChange={handleAddressSelectionChange}
+              placeholder="Search the service address"
+              selectedAddress={validatedAddress}
+            />
           </div>
 
           <div className="lg:col-span-2">

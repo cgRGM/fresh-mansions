@@ -1,5 +1,6 @@
 import { hashPassword } from "@fresh-mansions/auth/password";
 import { db } from "@fresh-mansions/db";
+import { buildFullAddress } from "@fresh-mansions/db/address";
 import { account, user } from "@fresh-mansions/db/schema/auth";
 import { customer, property } from "@fresh-mansions/db/schema/domain";
 import { customerBackfillSchema } from "@fresh-mansions/db/validators";
@@ -57,13 +58,21 @@ export const createCustomerBackfill = createServerFn({ method: "POST" })
 
     if (data.street && data.city && data.state && data.zip) {
       propertyId = crypto.randomUUID();
+      const fullAddress = buildFullAddress({
+        addressLine2: data.addressLine2,
+        city: data.city,
+        formattedAddress: data.fullAddress || data.formattedAddress,
+        state: data.state,
+        street: data.street,
+        zip: data.zip,
+      });
 
       await db.insert(property).values({
         addressLine2: data.addressLine2 || null,
         addressValidationStatus: data.validationStatus,
         city: data.city,
         customerId,
-        formattedAddress: data.formattedAddress || null,
+        formattedAddress: fullAddress || data.formattedAddress || null,
         id: propertyId,
         latitude: data.latitude ?? null,
         longitude: data.longitude ?? null,

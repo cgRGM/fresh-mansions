@@ -20,7 +20,6 @@ export const updateQuoteStatus = createServerFn({ method: "POST" })
     const [updated] = await db
       .update(quote)
       .set({
-        finalizedAt: data.status === "rejected" ? null : undefined,
         status: data.status,
       })
       .where(eq(quote.id, data.quoteId))

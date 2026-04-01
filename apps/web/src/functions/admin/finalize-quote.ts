@@ -7,28 +7,35 @@ import { z } from "zod";
 import { authMiddleware } from "@/middleware/auth";
 import { requireRoleMiddleware } from "@/middleware/roles";
 
-export const finalizeQuote = createServerFn({ method: "POST" })
+export const sendQuote = createServerFn({ method: "POST" })
   .inputValidator(
-    z
-      .object({
-        estimateHigh: z.number().int().positive(),
-        estimateLow: z.number().int().positive(),
-        quoteId: z.string(),
-      })
-      .refine((value) => value.estimateHigh >= value.estimateLow, {
-        message: "Estimate high must be greater than or equal to estimate low",
-        path: ["estimateHigh"],
-      })
+    z.object({
+      finalPrice: z.number().int().positive(),
+      proposedWorkDate: z.string().min(1),
+      quoteId: z.string(),
+    })
   )
   .middleware([authMiddleware, requireRoleMiddleware("admin")])
   .handler(async ({ data }) => {
+    const quoteRecord = await db.query.quote.findFirst({
+      where: eq(quote.id, data.quoteId),
+    });
+
+    if (!quoteRecord) {
+      throw new Error("Quote not found");
+    }
+
+    if (!quoteRecord.scheduledVisitAt) {
+      throw new Error("Schedule the site visit before sending the quote");
+    }
+
     const [updated] = await db
       .update(quote)
       .set({
-        estimateHigh: data.estimateHigh,
-        estimateLow: data.estimateLow,
-        finalizedAt: new Date(),
-        status: "quote_ready",
+        finalPrice: data.finalPrice,
+        proposedWorkDate: data.proposedWorkDate,
+        quotedAt: new Date(),
+        status: "quote_sent",
       })
       .where(eq(quote.id, data.quoteId))
       .returning();

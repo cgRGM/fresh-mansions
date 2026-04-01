@@ -71,9 +71,7 @@ export const quote = sqliteTable(
     customerId: text("customer_id")
       .notNull()
       .references(() => customer.id, { onDelete: "cascade" }),
-    estimateHigh: integer("estimate_high"),
-    estimateLow: integer("estimate_low"),
-    finalizedAt: integer("finalized_at", { mode: "timestamp_ms" }),
+    finalPrice: integer("final_price"),
     id: text("id").primaryKey(),
     notes: text("notes"),
     preferredEndDate: text("preferred_end_date"),
@@ -83,6 +81,8 @@ export const quote = sqliteTable(
       .notNull()
       .references(() => property.id, { onDelete: "cascade" }),
     propertySize: text("property_size"),
+    proposedWorkDate: text("proposed_work_date"),
+    quotedAt: integer("quoted_at", { mode: "timestamp_ms" }),
     scheduledVisitAt: integer("scheduled_visit_at", { mode: "timestamp_ms" }),
     serviceType: text("service_type").notNull(),
     status: text("status").notNull().default("requested"),

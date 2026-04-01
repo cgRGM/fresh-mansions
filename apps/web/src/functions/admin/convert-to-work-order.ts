@@ -19,18 +19,27 @@ export const convertToWorkOrder = createServerFn({ method: "POST" })
       throw new Error("Quote not found");
     }
 
+    const existingWorkOrder = await db.query.workOrder.findFirst({
+      where: eq(workOrder.quoteId, data.quoteId),
+    });
+
+    if (existingWorkOrder) {
+      return { workOrderId: existingWorkOrder.id };
+    }
+
     const workOrderId = crypto.randomUUID();
     await db.insert(workOrder).values({
       id: workOrderId,
       notes: quoteRecord.notes,
       quoteId: data.quoteId,
-      scheduledDate: quoteRecord.preferredStartDate,
+      scheduledDate:
+        quoteRecord.proposedWorkDate ?? quoteRecord.preferredStartDate,
       status: "pending",
     });
 
     await db
       .update(quote)
-      .set({ status: "converted" })
+      .set({ status: "accepted" })
       .where(eq(quote.id, data.quoteId));
 
     return { workOrderId };

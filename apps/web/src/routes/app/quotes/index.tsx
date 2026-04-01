@@ -11,6 +11,7 @@ import { formatCents } from "@/lib/estimates";
 import {
   formatQuoteWindow,
   formatScheduledVisit,
+  formatServiceDate,
   formatVisitTime,
   getQuoteStatusMeta,
 } from "@/lib/quotes";
@@ -62,9 +63,6 @@ const QuotesListPage = () => {
           <div className="space-y-3">
             {quotes.map((quote) => {
               const statusMeta = getQuoteStatusMeta(quote.status);
-              const hasEstimateRange =
-                typeof quote.estimateLow === "number" &&
-                typeof quote.estimateHigh === "number";
 
               return (
                 <Link
@@ -101,9 +99,12 @@ const QuotesListPage = () => {
                           Visit: {formatScheduledVisit(quote.scheduledVisitAt)}
                         </span>
                         <span>
-                          {hasEstimateRange
-                            ? `${formatCents(quote.estimateLow)} – ${formatCents(quote.estimateHigh)}`
-                            : "Estimate pending"}
+                          {typeof quote.finalPrice === "number"
+                            ? `Quote: ${formatCents(quote.finalPrice)}`
+                            : "Quote pending"}
+                        </span>
+                        <span>
+                          Work date: {formatServiceDate(quote.proposedWorkDate)}
                         </span>
                       </div>
                     </div>

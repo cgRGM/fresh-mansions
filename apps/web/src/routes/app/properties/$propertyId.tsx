@@ -6,7 +6,11 @@ import { EmptyState } from "@/components/empty-state";
 import { getPropertyDetail } from "@/functions/get-property-detail";
 import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
-import { formatQuoteWindow, getQuoteStatusMeta } from "@/lib/quotes";
+import {
+  formatQuoteWindow,
+  formatServiceDate,
+  getQuoteStatusMeta,
+} from "@/lib/quotes";
 
 export const Route = createFileRoute("/app/properties/$propertyId")({
   component: PropertyDetailPage,
@@ -109,13 +113,11 @@ const PropertyDetailPage = () => {
                         {quote.serviceType}
                       </span>
                       <div className="flex flex-wrap items-center gap-3 text-xs text-black/40">
-                        {quote.estimateLow != null &&
-                          quote.estimateHigh != null && (
-                            <span className="font-medium text-emerald-700">
-                              {formatCents(quote.estimateLow)} –{" "}
-                              {formatCents(quote.estimateHigh)}
-                            </span>
-                          )}
+                        {quote.finalPrice != null ? (
+                          <span className="font-medium text-emerald-700">
+                            {formatCents(quote.finalPrice)}
+                          </span>
+                        ) : null}
                         {quote.preferredStartDate ? (
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
@@ -124,6 +126,9 @@ const PropertyDetailPage = () => {
                               quote.preferredStartDate
                             )}
                           </span>
+                        ) : null}
+                        {quote.proposedWorkDate ? (
+                          <span>Work date: {formatServiceDate(quote.proposedWorkDate)}</span>
                         ) : null}
                       </div>
                     </div>

@@ -43,10 +43,9 @@ export type PreferredVisitTime = zod.infer<typeof preferredVisitTimeSchema>;
 export const quoteStatusEnum = zod.enum([
   "requested",
   "visit_scheduled",
-  "quote_ready",
-  "approved",
+  "quote_sent",
+  "accepted",
   "rejected",
-  "converted",
 ]);
 export type QuoteStatus = zod.infer<typeof quoteStatusEnum>;
 
@@ -190,6 +189,7 @@ export const customerBackfillSchema = zod
     city: zod.string().optional(),
     email: zod.email(),
     formattedAddress: zod.string().optional(),
+    fullAddress: zod.string().optional(),
     latitude: zod.number().optional(),
     longitude: zod.number().optional(),
     name: zod.string().min(2),

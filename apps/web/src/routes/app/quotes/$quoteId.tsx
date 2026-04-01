@@ -1,6 +1,7 @@
 import { Badge } from "@fresh-mansions/ui/components/badge";
+import { Button } from "@fresh-mansions/ui/components/button";
 import { cn } from "@fresh-mansions/ui/lib/utils";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import {
   ArrowLeft,
   CalendarClock,
@@ -9,13 +10,16 @@ import {
   Home,
   MessageSquare,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { getQuoteDetail } from "@/functions/get-quote-detail";
+import { respondToQuote } from "@/functions/respond-to-quote";
 import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
 import {
   formatQuoteWindow,
   formatScheduledVisit,
+  formatServiceDate,
   formatVisitTime,
   getQuotePhotoUrl,
   getQuoteStatusMeta,
@@ -28,6 +32,7 @@ export const Route = createFileRoute("/app/quotes/$quoteId")({
 
 const QuoteDetailPage = () => {
   const quote = Route.useLoaderData();
+  const router = useRouter();
 
   if (!quote) {
     return (
@@ -49,6 +54,25 @@ const QuoteDetailPage = () => {
   }
 
   const statusMeta = getQuoteStatusMeta(quote.status);
+
+  const handleResponse = async (status: "accepted" | "rejected") => {
+    try {
+      await respondToQuote({
+        data: {
+          quoteId: quote.id,
+          status,
+        },
+      });
+      toast.success(
+        status === "accepted"
+          ? "Quote accepted. We’ll move it into scheduling."
+          : "Quote declined."
+      );
+      await router.invalidate();
+    } catch {
+      toast.error("We couldn't save your response");
+    }
+  };
 
   return (
     <div className="min-h-full bg-[#f4f2ec] px-4 py-6 sm:px-6 lg:px-8">
@@ -133,6 +157,12 @@ const QuoteDetailPage = () => {
                   {formatScheduledVisit(quote.scheduledVisitAt)}
                 </span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-black/45">Proposed work date</span>
+                <span className="font-medium text-black">
+                  {formatServiceDate(quote.proposedWorkDate)}
+                </span>
+              </div>
             </div>
           </section>
         </div>
@@ -157,18 +187,18 @@ const QuoteDetailPage = () => {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-black/45">Estimate</span>
+                <span className="text-black/45">Final quote</span>
                 <span className="font-medium text-black">
-                  {quote.estimateLow != null && quote.estimateHigh != null
-                    ? `${formatCents(quote.estimateLow)} – ${formatCents(quote.estimateHigh)}`
+                  {quote.finalPrice != null
+                    ? formatCents(quote.finalPrice)
                     : "Pending site review"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-black/45">Finalized</span>
+                <span className="text-black/45">Quote sent</span>
                 <span className="font-medium text-black">
-                  {quote.finalizedAt
-                    ? quote.finalizedAt.toLocaleDateString()
+                  {quote.quotedAt
+                    ? quote.quotedAt.toLocaleDateString()
                     : "Not yet"}
                 </span>
               </div>
@@ -189,6 +219,38 @@ const QuoteDetailPage = () => {
             </p>
           </section>
         </div>
+
+        {quote.status === "quote_sent" ? (
+          <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+                  Customer action
+                </p>
+                <h2 className="mt-1 text-lg font-bold tracking-[-0.03em] text-black">
+                  Review the fixed quote and proposed work date
+                </h2>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  className="rounded-full bg-[#0a1a10] text-white hover:bg-[#0a1a10]/90"
+                  onClick={() => handleResponse("accepted")}
+                  type="button"
+                >
+                  Accept quote
+                </Button>
+                <Button
+                  className="rounded-full"
+                  onClick={() => handleResponse("rejected")}
+                  type="button"
+                  variant="destructive"
+                >
+                  Decline quote
+                </Button>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {/* Photos */}
         <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">

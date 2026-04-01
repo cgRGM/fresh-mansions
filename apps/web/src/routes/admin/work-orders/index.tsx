@@ -166,7 +166,7 @@ const AdminWorkOrdersPage = () => {
               Dispatch board
             </p>
             <h1 className="text-2xl font-bold tracking-[-0.04em] text-black sm:text-3xl">
-              Assign approved work to crews and routes
+              Assign accepted work to crews and routes
             </h1>
           </div>
         </div>
@@ -174,7 +174,7 @@ const AdminWorkOrdersPage = () => {
 
       {workOrders.length === 0 ? (
         <EmptyState
-          description="Work orders appear here once quotes are approved and converted. Check the Quotes tab to move requests forward."
+          description="Work orders appear here once customers accept their fixed quotes. Check the Quotes tab to move requests forward."
           illustration="sun"
           title="No work orders yet"
         />

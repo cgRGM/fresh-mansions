@@ -1,6 +1,4 @@
 import { Badge } from "@fresh-mansions/ui/components/badge";
-import { buttonVariants } from "@fresh-mansions/ui/components/button";
-import { cn } from "@fresh-mansions/ui/lib/utils";
 import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -22,6 +20,7 @@ import { formatCents } from "@/lib/estimates";
 import {
   formatQuoteWindow,
   formatScheduledVisit,
+  formatServiceDate,
   formatVisitTime,
   getQuoteStatusMeta,
   normalizeQuoteStatus,
@@ -43,10 +42,8 @@ const DashboardPage = () => {
       normalizeQuoteStatus(quote.status)
     )
   );
-  const finalizedQuotes = quotes.filter((quote) =>
-    ["approved", "converted", "quote_ready"].includes(
-      normalizeQuoteStatus(quote.status)
-    )
+  const quotesReadyForReview = quotes.filter(
+    (quote) => normalizeQuoteStatus(quote.status) === "quote_sent"
   );
   const highlightedQuote = search.quoteId
     ? quotes.find((quote) => quote.id === search.quoteId)
@@ -68,12 +65,13 @@ const DashboardPage = () => {
                   Request received
                 </div>
                 <h1 className="text-2xl font-bold tracking-[-0.04em] sm:text-3xl">
-                  Your estimate visit request is in review
+                  Your service request is moving forward
                 </h1>
                 <p className="max-w-2xl text-sm leading-relaxed text-white/60">
                   We have your requested window, preferred time, property
-                  details, and uploaded notes. The team will confirm the visit
-                  before posting the final quote.
+                  details, and uploaded notes. The team will schedule the visit,
+                  confirm the final price, and send over a work date for you to
+                  approve.
                 </p>
               </div>
               <Link
@@ -99,8 +97,8 @@ const DashboardPage = () => {
               Welcome back, {firstName}
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-black/50">
-              Track estimate requests, review finalized quotes, and keep every
-              property organized — all in one place.
+              Track new requests, review fixed quotes, and keep every property
+              organized in one place.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -117,8 +115,8 @@ const DashboardPage = () => {
                 },
                 {
                   icon: TrendingUp,
-                  label: "Quotes ready",
-                  value: String(finalizedQuotes.length),
+                  label: "Awaiting reply",
+                  value: String(quotesReadyForReview.length),
                 },
                 {
                   icon: FileText,
@@ -206,7 +204,7 @@ const DashboardPage = () => {
           />
         ) : (
           <>
-            {/* Pending + Finalized */}
+            {/* Pending + Quotes ready */}
             <section className="grid gap-4 lg:grid-cols-2">
               <div className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
                 <div className="mb-5 flex items-center justify-between">
@@ -282,10 +280,10 @@ const DashboardPage = () => {
                 <div className="mb-5 flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
-                      Finalized quotes
+                      Fixed quotes
                     </p>
                     <h3 className="mt-1.5 text-xl font-bold tracking-[-0.04em] text-black">
-                      Ready for review
+                      Ready for your approval
                     </h3>
                   </div>
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50">
@@ -294,17 +292,16 @@ const DashboardPage = () => {
                 </div>
 
                 <div className="space-y-2.5">
-                  {finalizedQuotes.length === 0 ? (
+                  {quotesReadyForReview.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-black/8 bg-[#f4f2ec]/50 p-5 text-center text-sm text-black/40">
-                      No finalized quotes yet. Pricing will appear here after
-                      the property visit.
+                      No fixed quotes are waiting right now. We will show the
+                      final price and proposed work date here after the visit.
                     </div>
                   ) : (
-                    finalizedQuotes.map((quote) => {
+                    quotesReadyForReview.map((quote) => {
                       const statusMeta = getQuoteStatusMeta(quote.status);
-                      const hasEstimateRange =
-                        typeof quote.estimateLow === "number" &&
-                        typeof quote.estimateHigh === "number";
+                      const hasFinalPrice =
+                        typeof quote.finalPrice === "number";
 
                       return (
                         <Link
@@ -321,12 +318,15 @@ const DashboardPage = () => {
                               <p className="mt-1 truncate text-xs text-black/45">
                                 {getPropertyDisplayAddress(quote.property)}
                               </p>
-                              {hasEstimateRange ? (
+                              {hasFinalPrice ? (
                                 <p className="mt-2 text-sm font-semibold text-emerald-700">
-                                  {formatCents(quote.estimateLow)} –{" "}
-                                  {formatCents(quote.estimateHigh)}
+                                  {formatCents(quote.finalPrice)}
                                 </p>
                               ) : null}
+                              <p className="mt-1 text-xs text-black/45">
+                                Work date:{" "}
+                                {formatServiceDate(quote.proposedWorkDate)}
+                              </p>
                             </div>
                             <Badge className={statusMeta.badge}>
                               {statusMeta.label}

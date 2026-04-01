@@ -23,6 +23,7 @@ import { formatCents } from "@/lib/estimates";
 import {
   formatQuoteWindow,
   formatScheduledVisit,
+  formatServiceDate,
   getQuoteStatusMeta,
   normalizeQuoteStatus,
 } from "@/lib/quotes";
@@ -31,10 +32,9 @@ const STATUS_OPTIONS = [
   { label: "All", value: "all" },
   { label: "Requested", value: "requested" },
   { label: "Visit scheduled", value: "visit_scheduled" },
-  { label: "Quote ready", value: "quote_ready" },
-  { label: "Approved", value: "approved" },
+  { label: "Quote sent", value: "quote_sent" },
+  { label: "Accepted", value: "accepted" },
   { label: "Rejected", value: "rejected" },
-  { label: "Converted", value: "converted" },
 ] as const;
 
 const adminQuotesRouteApi = getRouteApi("/admin/quotes/");
@@ -157,16 +157,13 @@ const AdminQuotesPage = () => {
                 <TableHead>Property</TableHead>
                 <TableHead>Window</TableHead>
                 <TableHead>Scheduled visit</TableHead>
-                <TableHead>Estimate</TableHead>
+                <TableHead>Quote / work date</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredQuotes.map((quote) => {
                 const statusMeta = getQuoteStatusMeta(quote.status);
-                const hasEstimateRange =
-                  typeof quote.estimateLow === "number" &&
-                  typeof quote.estimateHigh === "number";
 
                 return (
                   <TableRow
@@ -196,9 +193,16 @@ const AdminQuotesPage = () => {
                       {formatScheduledVisit(quote.scheduledVisitAt)}
                     </TableCell>
                     <TableCell>
-                      {hasEstimateRange
-                        ? `${formatCents(quote.estimateLow)} - ${formatCents(quote.estimateHigh)}`
-                        : "Pending"}
+                      <div className="text-sm">
+                        <p>
+                          {typeof quote.finalPrice === "number"
+                            ? formatCents(quote.finalPrice)
+                            : "Pending"}
+                        </p>
+                        <p className="text-xs text-black/40">
+                          {formatServiceDate(quote.proposedWorkDate)}
+                        </p>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge className={statusMeta.badge}>

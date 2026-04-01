@@ -6,25 +6,20 @@ const legacyStatusMap = {
 } as const;
 
 export const quoteStatusMeta = {
-  approved: {
+  accepted: {
     badge: "bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20",
-    description: "Approved and ready to convert into scheduled work.",
-    label: "Approved",
+    description: "The quote was accepted and the work is ready for dispatch.",
+    label: "Accepted",
   },
-  converted: {
-    badge: "bg-black text-white ring-1 ring-black/10",
-    description: "Converted into an active work order.",
-    label: "Converted",
-  },
-  quote_ready: {
+  quote_sent: {
     badge: "bg-neutral-900 text-white ring-1 ring-neutral-900/20",
-    description: "Your estimate is ready for review.",
-    label: "Quote Ready",
+    description: "A fixed quote and proposed work date are ready for review.",
+    label: "Quote Sent",
   },
   rejected: {
     badge: "bg-rose-500/10 text-rose-700 ring-1 ring-rose-500/20",
-    description: "We cannot move forward with this request as submitted.",
-    label: "Closed",
+    description: "This quote was declined and will not move forward.",
+    label: "Declined",
   },
   requested: {
     badge: "bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20",
@@ -117,6 +112,16 @@ export const formatScheduledVisit = (value?: Date | null): string => {
   return value.toLocaleString(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
+  });
+};
+
+export const formatServiceDate = (value?: null | string): string => {
+  if (!value) {
+    return "Date pending";
+  }
+
+  return new Date(value).toLocaleDateString(undefined, {
+    dateStyle: "medium",
   });
 };
 

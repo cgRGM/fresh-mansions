@@ -1,5 +1,6 @@
 import { hashPassword } from "@fresh-mansions/auth/password";
 import { db } from "@fresh-mansions/db";
+import { buildFullAddress } from "@fresh-mansions/db/address";
 import { account, user } from "@fresh-mansions/db/schema/auth";
 import {
   contractor,
@@ -43,18 +44,19 @@ const scheduleVisitSchema = z.object({
   scheduledVisitAt: z.string().min(1),
 });
 
-const finalizeQuoteSchema = z
-  .object({
-    estimateHigh: z.number().int().positive(),
-    estimateLow: z.number().int().positive(),
-  })
-  .refine((value) => value.estimateHigh >= value.estimateLow, {
-    message: "estimateHigh must be greater than or equal to estimateLow",
-    path: ["estimateHigh"],
-  });
+const sendQuoteSchema = z.object({
+  finalPrice: z.number().int().positive(),
+  proposedWorkDate: z.string().min(1),
+});
 
 const updateQuoteStatusSchema = z.object({
-  status: z.enum(["approved", "rejected", "quote_ready", "visit_scheduled"]),
+  status: z.enum([
+    "accepted",
+    "quote_sent",
+    "rejected",
+    "requested",
+    "visit_scheduled",
+  ]),
 });
 
 const reorderStopsSchema = z.object({
@@ -210,14 +212,29 @@ app.patch("/quotes/:id/schedule", async (c) => {
 
 app.patch("/quotes/:id/finalize", async (c) => {
   const quoteId = c.req.param("id");
-  const body = finalizeQuoteSchema.parse(await c.req.json());
+  const body = sendQuoteSchema.parse(await c.req.json());
+  const quoteRecord = await db.query.quote.findFirst({
+    where: eq(quote.id, quoteId),
+  });
+
+  if (!quoteRecord) {
+    return c.json({ error: "Quote not found" }, 404);
+  }
+
+  if (!quoteRecord.scheduledVisitAt) {
+    return c.json(
+      { error: "Schedule the site visit before sending a quote" },
+      400
+    );
+  }
+
   const [updatedQuote] = await db
     .update(quote)
     .set({
-      estimateHigh: body.estimateHigh,
-      estimateLow: body.estimateLow,
-      finalizedAt: new Date(),
-      status: "quote_ready",
+      finalPrice: body.finalPrice,
+      proposedWorkDate: body.proposedWorkDate,
+      quotedAt: new Date(),
+      status: "quote_sent",
     })
     .where(eq(quote.id, quoteId))
     .returning();
@@ -239,8 +256,12 @@ app.post("/quotes/:id/convert", async (c) => {
     return c.json({ error: "Quote not found" }, 404);
   }
 
-  if (quoteRecord.status === "converted") {
-    return c.json({ error: "Quote already converted" }, 400);
+  const existingWorkOrder = await db.query.workOrder.findFirst({
+    where: eq(workOrder.quoteId, quoteId),
+  });
+
+  if (existingWorkOrder) {
+    return c.json({ workOrderId: existingWorkOrder.id }, 200);
   }
 
   const workOrderId = crypto.randomUUID();
@@ -250,13 +271,14 @@ app.post("/quotes/:id/convert", async (c) => {
     id: workOrderId,
     notes: quoteRecord.notes,
     quoteId: quoteRecord.id,
-    scheduledDate: quoteRecord.preferredStartDate,
+    scheduledDate:
+      quoteRecord.proposedWorkDate ?? quoteRecord.preferredStartDate,
     status: "pending",
   });
 
   await db
     .update(quote)
-    .set({ status: "converted" })
+    .set({ status: "accepted" })
     .where(eq(quote.id, quoteId));
 
   return c.json({ workOrderId }, 201);
@@ -317,12 +339,21 @@ app.post("/customers", async (c) => {
 
   if (body.street && body.city && body.state && body.zip) {
     propertyId = crypto.randomUUID();
+    const fullAddress = buildFullAddress({
+      addressLine2: body.addressLine2,
+      city: body.city,
+      formattedAddress: body.fullAddress || body.formattedAddress,
+      state: body.state,
+      street: body.street,
+      zip: body.zip,
+    });
+
     await db.insert(property).values({
       addressLine2: body.addressLine2 ?? null,
       addressValidationStatus: body.validationStatus,
       city: body.city,
       customerId,
-      formattedAddress: body.formattedAddress ?? null,
+      formattedAddress: fullAddress || body.formattedAddress || null,
       id: propertyId,
       latitude: body.latitude ?? null,
       longitude: body.longitude ?? null,

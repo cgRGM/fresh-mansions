@@ -1,6 +1,6 @@
 import { Badge } from "@fresh-mansions/ui/components/badge";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
-import { ArrowRight, Briefcase } from "lucide-react";
+import { Briefcase } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
 import { getDashboard } from "@/functions/get-dashboard";
@@ -30,7 +30,7 @@ const OrdersPage = () => {
         {/* Content */}
         {orders.length === 0 ? (
           <EmptyState
-            description="Once a quote is approved and a service is scheduled, your work orders will appear here so you can track progress."
+            description="Once you accept a fixed quote, your scheduled work will appear here so you can track progress."
             illustration="sun"
             title="No active orders"
           />

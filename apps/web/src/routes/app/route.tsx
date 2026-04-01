@@ -127,7 +127,7 @@ const AppLayout = () => {
               </nav>
               <div className="border-t border-white/8 p-4">
                 <SuperUserViewSwitcher
-                  className="mb-3 rounded-2xl border border-white/10 p-3 text-white"
+                  className="mb-3 rounded-2xl border border-white/10 p-3 text-white [&_button]:border-white/20 [&_button]:bg-white/10 [&_button]:text-white/80 [&_button]:hover:bg-white/20 [&_button]:hover:text-white"
                   session={appSession}
                 />
                 <div className="flex items-center justify-between">
@@ -183,7 +183,7 @@ const AppLayout = () => {
         </nav>
         <div className="border-t border-white/8 p-4">
           <SuperUserViewSwitcher
-            className="mb-3 rounded-2xl border border-white/10 p-3 text-white"
+            className="mb-3 rounded-2xl border border-white/10 p-3 text-white [&_button]:border-white/20 [&_button]:bg-white/10 [&_button]:text-white/80 [&_button]:hover:bg-white/20 [&_button]:hover:text-white"
             session={appSession}
           />
           <div className="flex items-center justify-between">
