@@ -1,16 +1,8 @@
 import { Badge } from "@fresh-mansions/ui/components/badge";
-import { Button } from "@fresh-mansions/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@fresh-mansions/ui/components/card";
-import { Separator } from "@fresh-mansions/ui/components/separator";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Calendar, FileText, MapPin } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Home, MapPin } from "lucide-react";
 
+import { EmptyState } from "@/components/empty-state";
 import { getPropertyDetail } from "@/functions/get-property-detail";
 import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
@@ -27,103 +19,127 @@ const PropertyDetailPage = () => {
 
   if (!property) {
     return (
-      <div className="mx-auto max-w-2xl p-4 md:p-8">
-        <Link to="/app/properties">
-          <Button variant="ghost" className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Properties
-          </Button>
-        </Link>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <p className="text-gray-500">Property not found</p>
-          </CardContent>
-        </Card>
+      <div className="min-h-full bg-[#f4f2ec] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl">
+          <Link
+            className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-black/45 transition hover:text-black"
+            to="/app/properties"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to properties
+          </Link>
+          <div className="rounded-3xl border border-black/6 bg-white p-10 text-center shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+            <p className="text-black/50">Property not found.</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-4 md:p-8">
-      <Link to="/app/properties">
-        <Button variant="ghost" className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Properties
-        </Button>
-      </Link>
+    <div className="min-h-full bg-[#f4f2ec] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl space-y-5 stagger-children">
+        <Link
+          className="inline-flex items-center gap-2 text-sm font-medium text-black/45 transition hover:text-black"
+          to="/app/properties"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to properties
+        </Link>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-xl">
-            {property.nickname ?? "Property"}
-          </CardTitle>
-          <CardDescription className="flex items-center gap-1">
-            <MapPin className="h-4 w-4" />
-            {getPropertyDisplayAddress(property)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {property.addressLine2 ? (
-            <p className="text-sm text-gray-600">
-              {property.addressLine2}
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
+        {/* Property header */}
+        <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-emerald-50">
+              <Home className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+                Property
+              </p>
+              <h1 className="mt-1 text-2xl font-bold tracking-[-0.04em] text-black sm:text-3xl">
+                {property.nickname ?? "Property"}
+              </h1>
+              <div className="mt-2 flex items-center gap-1.5 text-sm text-black/50">
+                <MapPin className="h-3.5 w-3.5" />
+                {getPropertyDisplayAddress(property)}
+              </div>
+              {property.addressLine2 ? (
+                <p className="mt-1 text-sm text-black/40">
+                  {property.addressLine2}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </section>
 
-      <Separator className="mb-6" />
+        {/* Quotes for this property */}
+        <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          <h2 className="text-lg font-bold tracking-[-0.03em] text-black">
+            Quotes
+          </h2>
 
-      <h2 className="mb-4 text-lg font-semibold text-gray-900">Quotes</h2>
-      {!property.quotes || property.quotes.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="mb-4 h-12 w-12 text-gray-300" />
-            <p className="text-gray-500">No quotes for this property</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {property.quotes.map((quote) => (
-            <Link
-              key={quote.id}
-              to="/app/quotes/$quoteId"
-              params={{ quoteId: quote.id }}
-            >
-              <Card className="cursor-pointer transition-shadow hover:shadow-md">
-                <CardContent className="flex items-center justify-between py-4">
-                  <div className="flex flex-col gap-1">
-                    <span className="font-medium">{quote.serviceType}</span>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      {quote.estimateLow != null &&
-                        quote.estimateHigh != null && (
-                          <span>
-                            {formatCents(quote.estimateLow)} -{" "}
-                            {formatCents(quote.estimateHigh)}
-                          </span>
-                        )}
-                      {quote.preferredStartDate ? (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {formatQuoteWindow(
-                            quote.preferredEndDate,
-                            quote.preferredStartDate
-                          )}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <Badge
-                    className={getQuoteStatusMeta(quote.status).badge}
-                    variant="secondary"
+          {!property.quotes || property.quotes.length === 0 ? (
+            <div className="mt-4">
+              <EmptyState
+                action={{
+                  href: "/get-quote",
+                  label: "Request an estimate",
+                }}
+                className="border-0 p-6 shadow-none"
+                description="No quotes have been created for this property yet."
+                illustration="leaf"
+                title="No quotes yet"
+              />
+            </div>
+          ) : (
+            <div className="mt-4 space-y-2.5">
+              {property.quotes.map((quote) => {
+                const statusMeta = getQuoteStatusMeta(quote.status);
+
+                return (
+                  <Link
+                    className="group flex items-center justify-between rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 transition-all hover:border-black/12 hover:shadow-sm"
+                    key={quote.id}
+                    params={{ quoteId: quote.id }}
+                    to="/app/quotes/$quoteId"
                   >
-                    {getQuoteStatusMeta(quote.status).label}
-                  </Badge>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
+                    <div className="flex flex-col gap-1">
+                      <span className="font-semibold tracking-[-0.02em] text-black">
+                        {quote.serviceType}
+                      </span>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-black/40">
+                        {quote.estimateLow != null &&
+                          quote.estimateHigh != null && (
+                            <span className="font-medium text-emerald-700">
+                              {formatCents(quote.estimateLow)} –{" "}
+                              {formatCents(quote.estimateHigh)}
+                            </span>
+                          )}
+                        {quote.preferredStartDate ? (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {formatQuoteWindow(
+                              quote.preferredEndDate,
+                              quote.preferredStartDate
+                            )}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className={statusMeta.badge}>
+                        {statusMeta.label}
+                      </Badge>
+                      <ArrowRight className="h-4 w-4 text-black/20 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 };

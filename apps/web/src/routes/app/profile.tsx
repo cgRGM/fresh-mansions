@@ -1,13 +1,6 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@fresh-mansions/ui/components/card";
-import { Label } from "@fresh-mansions/ui/components/label";
-import { Separator } from "@fresh-mansions/ui/components/separator";
 import { createFileRoute } from "@tanstack/react-router";
-import { Mail, User } from "lucide-react";
+import { LogOut, Mail, Sprout, User } from "lucide-react";
+import { useCallback } from "react";
 
 import { authClient } from "@/lib/auth-client";
 
@@ -21,41 +14,83 @@ function ProfilePage() {
   const userName = session?.user?.name ?? "User";
   const userEmail = session?.user?.email ?? "";
 
-  return (
-    <div className="mx-auto max-w-2xl p-4 md:p-8">
-      <h1 className="mb-8 text-2xl font-bold text-gray-900">Profile</h1>
+  const handleSignOut = useCallback(async () => {
+    await authClient.signOut();
+    window.location.href = "/login";
+  }, []);
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-700 text-2xl font-bold">
+  return (
+    <div className="min-h-full bg-[#f4f2ec] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-3xl space-y-5 stagger-children">
+        {/* Header */}
+        <div className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+            Account
+          </p>
+          <h1 className="mt-2 text-2xl font-bold tracking-[-0.04em] text-black sm:text-3xl">
+            Your profile
+          </h1>
+        </div>
+
+        {/* Profile card */}
+        <div className="relative overflow-hidden rounded-3xl border border-black/6 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          {/* Decorative header band */}
+          <div className="relative h-28 bg-gradient-to-br from-[#0a1a10] via-[#132b1a] to-[#0f0f0f]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,_oklch(0.6_0.15_140_/_0.15),_transparent_60%)]" />
+            <div className="absolute bottom-3 right-4">
+              <Sprout className="h-5 w-5 text-[#d6f18b]/30" />
+            </div>
+          </div>
+
+          {/* Avatar */}
+          <div className="relative px-6">
+            <div className="-mt-10 flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-white bg-[#d6f18b] text-2xl font-bold text-[#0a1a10] shadow-lg">
               {userName.charAt(0).toUpperCase()}
             </div>
-            <CardTitle className="text-xl">{userName}</CardTitle>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Separator />
 
-          <div className="space-y-4">
-            <div>
-              <Label className="mb-1 flex items-center gap-2 text-sm text-gray-500">
-                <User className="h-4 w-4" />
-                Name
-              </Label>
-              <p className="text-gray-900">{userName}</p>
+          {/* Info */}
+          <div className="px-6 pb-6 pt-4">
+            <h2 className="text-xl font-bold tracking-[-0.03em] text-black">
+              {userName}
+            </h2>
+            <p className="mt-0.5 text-sm text-black/45">Customer account</p>
+
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center gap-3 rounded-2xl border border-black/5 bg-[#f9f8f5] px-4 py-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white">
+                  <User className="h-4 w-4 text-black/40" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-black/35">Name</p>
+                  <p className="text-sm font-medium text-black">{userName}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-2xl border border-black/5 bg-[#f9f8f5] px-4 py-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white">
+                  <Mail className="h-4 w-4 text-black/40" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-black/35">Email</p>
+                  <p className="text-sm font-medium text-black">{userEmail}</p>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <Label className="mb-1 flex items-center gap-2 text-sm text-gray-500">
-                <Mail className="h-4 w-4" />
-                Email
-              </Label>
-              <p className="text-gray-900">{userEmail}</p>
+            <div className="mt-6 border-t border-black/6 pt-6">
+              <button
+                className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                onClick={handleSignOut}
+                type="button"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,18 +1,21 @@
 import { Badge } from "@fresh-mansions/ui/components/badge";
-import { Button, buttonVariants } from "@fresh-mansions/ui/components/button";
+import { buttonVariants } from "@fresh-mansions/ui/components/button";
 import { cn } from "@fresh-mansions/ui/lib/utils";
 import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
   CalendarClock,
-  Camera,
+  ClipboardList,
   FileText,
   Home,
+  MapPin,
   Plus,
   Sparkles,
+  TrendingUp,
 } from "lucide-react";
 import * as zod from "zod";
 
+import { EmptyState } from "@/components/empty-state";
 import { getDashboard } from "@/functions/get-dashboard";
 import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
@@ -49,66 +52,76 @@ const DashboardPage = () => {
     ? quotes.find((quote) => quote.id === search.quoteId)
     : null;
 
+  const firstName = session?.user?.name?.split(" ")[0] ?? "there";
+
   return (
-    <div className="min-h-full bg-[#f6f4ef] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <div className="min-h-full bg-[#f4f2ec] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl space-y-5 stagger-children">
+        {/* Highlighted quote banner */}
         {highlightedQuote ? (
-          <section className="rounded-[2rem] border border-black/8 bg-black p-6 text-white shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a1a10] via-[#132b1a] to-[#0f0f0f] p-6 text-white shadow-[0_24px_80px_rgba(0,0,0,0.2)]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,_oklch(0.6_0.15_140_/_0.12),_transparent_60%)]" />
+            <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-2">
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-white/45">
+                <div className="inline-flex items-center gap-2 rounded-full bg-[#d6f18b]/15 px-3 py-1 text-xs font-semibold text-[#d6f18b]">
+                  <Sparkles className="h-3 w-3" />
                   Request received
-                </p>
-                <h1 className="text-3xl font-semibold tracking-[-0.06em]">
-                  Your estimate visit request is now in review.
+                </div>
+                <h1 className="text-2xl font-bold tracking-[-0.04em] sm:text-3xl">
+                  Your estimate visit request is in review
                 </h1>
-                <p className="max-w-2xl text-sm leading-7 text-white/64">
+                <p className="max-w-2xl text-sm leading-relaxed text-white/60">
                   We have your requested window, preferred time, property
-                  details, and uploaded notes. The operations team will confirm
-                  the visit before posting the final quote.
+                  details, and uploaded notes. The team will confirm the visit
+                  before posting the final quote.
                 </p>
               </div>
               <Link
                 params={{ quoteId: highlightedQuote.id }}
                 to="/app/quotes/$quoteId"
               >
-                <Button className="h-12 rounded-full bg-white px-5 text-black hover:bg-white/90">
+                <div className="inline-flex h-11 items-center gap-2 rounded-full bg-[#d6f18b] px-5 text-sm font-semibold text-[#0a1a10] transition hover:bg-[#e2f5a0]">
                   Open request
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                  <ArrowRight className="h-4 w-4" />
+                </div>
               </Link>
             </div>
           </section>
         ) : null}
 
+        {/* Hero section + Quick actions */}
         <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-black/42">
+          <div className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
               Dashboard
             </p>
-            <h2 className="mt-3 text-4xl font-semibold tracking-[-0.07em] text-black">
-              {session?.user?.name ?? "Client"} overview
+            <h2 className="mt-2 text-3xl font-bold tracking-[-0.05em] text-black sm:text-4xl">
+              Welcome back, {firstName}
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-black/60">
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-black/50">
               Track estimate requests, review finalized quotes, and keep every
-              property organized without chasing email threads.
+              property organized — all in one place.
             </p>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 {
-                  label: "Pending requests",
+                  icon: ClipboardList,
+                  label: "Pending",
                   value: String(pendingRequests.length),
                 },
                 {
-                  label: "Saved properties",
+                  icon: Home,
+                  label: "Properties",
                   value: String(properties.length),
                 },
                 {
-                  label: "Quotes ready or approved",
+                  icon: TrendingUp,
+                  label: "Quotes ready",
                   value: String(finalizedQuotes.length),
                 },
                 {
+                  icon: FileText,
                   label: "Active plans",
                   value: String(
                     subscriptions.filter(
@@ -118,11 +131,16 @@ const DashboardPage = () => {
                 },
               ].map((item) => (
                 <div
-                  className="rounded-[1.5rem] border border-black/8 bg-[#f6f4ef] p-4"
+                  className="group rounded-2xl border border-black/5 bg-[#f4f2ec]/60 p-4 transition-colors hover:bg-[#f4f2ec]"
                   key={item.label}
                 >
-                  <p className="text-sm text-black/52">{item.label}</p>
-                  <p className="mt-3 text-3xl font-semibold tracking-[-0.06em] text-black">
+                  <div className="flex items-center gap-2">
+                    <item.icon className="h-3.5 w-3.5 text-black/30" />
+                    <p className="text-xs font-medium text-black/45">
+                      {item.label}
+                    </p>
+                  </div>
+                  <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-black">
                     {item.value}
                   </p>
                 </div>
@@ -130,84 +148,85 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <aside className="rounded-[2rem] border border-black/8 bg-black p-6 text-white shadow-[0_20px_80px_rgba(0,0,0,0.16)]">
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-white/45">
-              Quick actions
-            </p>
-            <div className="mt-6 space-y-3">
-              <Link className="block" to="/get-quote">
-                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.06] p-4 transition hover:bg-white/10">
-                  <div className="flex items-center gap-3">
-                    <Plus className="h-4 w-4 text-[#d6f18b]" />
-                    <span className="font-medium">
-                      Request another estimate visit
+          <aside className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a1a10] to-[#141414] p-6 text-white shadow-[0_16px_50px_rgba(0,0,0,0.12)]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,_oklch(0.6_0.15_140_/_0.08),_transparent_50%)]" />
+            <div className="relative">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/35">
+                Quick actions
+              </p>
+              <div className="mt-5 space-y-2.5">
+                <Link className="block" to="/get-quote">
+                  <div className="group flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.05] px-4 py-3.5 transition-all hover:border-[#d6f18b]/20 hover:bg-[#d6f18b]/8">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#d6f18b]/15">
+                      <Plus className="h-4 w-4 text-[#d6f18b]" />
+                    </div>
+                    <span className="text-sm font-medium text-white/80 group-hover:text-white">
+                      Request a new estimate
                     </span>
+                    <ArrowRight className="ml-auto h-4 w-4 text-white/20 transition-transform group-hover:translate-x-0.5 group-hover:text-[#d6f18b]" />
                   </div>
-                </div>
-              </Link>
-              <Link className="block" to="/app/properties">
-                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.06] p-4 transition hover:bg-white/10">
-                  <div className="flex items-center gap-3">
-                    <Home className="h-4 w-4 text-[#d6f18b]" />
-                    <span className="font-medium">Review saved properties</span>
+                </Link>
+                <Link className="block" to="/app/properties">
+                  <div className="group flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.05] px-4 py-3.5 transition-all hover:border-white/15 hover:bg-white/8">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/8">
+                      <Home className="h-4 w-4 text-white/60" />
+                    </div>
+                    <span className="text-sm font-medium text-white/80 group-hover:text-white">
+                      Review saved properties
+                    </span>
+                    <ArrowRight className="ml-auto h-4 w-4 text-white/20 transition-transform group-hover:translate-x-0.5 group-hover:text-white/50" />
                   </div>
-                </div>
-              </Link>
-              <Link className="block" to="/app/quotes">
-                <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.06] p-4 transition hover:bg-white/10">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-4 w-4 text-[#d6f18b]" />
-                    <span className="font-medium">See every quote request</span>
+                </Link>
+                <Link className="block" to="/app/quotes">
+                  <div className="group flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.05] px-4 py-3.5 transition-all hover:border-white/15 hover:bg-white/8">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/8">
+                      <FileText className="h-4 w-4 text-white/60" />
+                    </div>
+                    <span className="text-sm font-medium text-white/80 group-hover:text-white">
+                      See all quote requests
+                    </span>
+                    <ArrowRight className="ml-auto h-4 w-4 text-white/20 transition-transform group-hover:translate-x-0.5 group-hover:text-white/50" />
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </div>
             </div>
           </aside>
         </section>
 
+        {/* Main content based on data */}
         {quotes.length === 0 ? (
-          <section className="rounded-[2rem] border border-dashed border-black/12 bg-white p-8 text-center shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
-            <Sparkles className="mx-auto h-10 w-10 text-[#79a63b]" />
-            <h3 className="mt-6 text-2xl font-semibold tracking-[-0.05em] text-black">
-              No requests or properties yet.
-            </h3>
-            <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-black/58">
-              This account is ready, but nothing has been submitted yet. Start
-              with the estimate visit flow and the dashboard will populate from
-              there.
-            </p>
-            <Link
-              className={cn(
-                buttonVariants({
-                  className:
-                    "mt-6 h-12 rounded-full bg-black px-5 text-white hover:bg-black/90",
-                })
-              )}
-              to="/get-quote"
-            >
-              Start the estimate request
-            </Link>
-          </section>
+          <EmptyState
+            action={{
+              href: "/get-quote",
+              label: "Request your first estimate",
+            }}
+            description="This account is ready, but nothing has been submitted yet. Start with the estimate visit flow and the dashboard will populate from there."
+            illustration="grass"
+            title="No requests or properties yet"
+          />
         ) : (
           <>
-            <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
-              <div className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
+            {/* Pending + Finalized */}
+            <section className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
                 <div className="mb-5 flex items-center justify-between">
                   <div>
-                    <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-black/42">
-                      Pending estimate visits
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+                      Pending visits
                     </p>
-                    <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-black">
+                    <h3 className="mt-1.5 text-xl font-bold tracking-[-0.04em] text-black">
                       Requests in motion
                     </h3>
                   </div>
-                  <CalendarClock className="h-5 w-5 text-black/35" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50">
+                    <CalendarClock className="h-4 w-4 text-amber-600" />
+                  </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {pendingRequests.length === 0 ? (
-                    <div className="rounded-[1.5rem] border border-black/8 bg-[#f6f4ef] p-5 text-sm text-black/55">
-                      No visit requests are currently waiting on review.
+                    <div className="rounded-2xl border border-dashed border-black/8 bg-[#f4f2ec]/50 p-5 text-center text-sm text-black/40">
+                      No visit requests are currently waiting.
                     </div>
                   ) : (
                     pendingRequests.map((quote) => {
@@ -215,36 +234,38 @@ const DashboardPage = () => {
 
                       return (
                         <Link
-                          className="block rounded-[1.5rem] border border-black/8 bg-[#f6f4ef] p-4 transition hover:border-black/16"
+                          className="group block rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 transition-all hover:border-black/12 hover:shadow-sm"
                           key={quote.id}
                           params={{ quoteId: quote.id }}
                           to="/app/quotes/$quoteId"
                         >
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <p className="text-lg font-semibold tracking-[-0.04em] text-black">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold tracking-[-0.02em] text-black">
                                 {quote.property?.nickname ?? quote.serviceType}
                               </p>
-                              <p className="mt-1 text-sm text-black/58">
+                              <p className="mt-1 truncate text-xs text-black/45">
                                 {getPropertyDisplayAddress(quote.property)}
                               </p>
-                              <p className="mt-3 text-sm text-black/58">
-                                Window:{" "}
-                                {formatQuoteWindow(
-                                  quote.preferredEndDate,
-                                  quote.preferredStartDate
-                                )}
-                              </p>
-                              <p className="text-sm text-black/58">
-                                Preferred time:{" "}
-                                {formatVisitTime(quote.preferredVisitTime)}
-                              </p>
-                              {quote.scheduledVisitAt ? (
-                                <p className="text-sm text-black/58">
-                                  Scheduled visit:{" "}
-                                  {formatScheduledVisit(quote.scheduledVisitAt)}
-                                </p>
-                              ) : null}
+                              <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-black/40">
+                                <span>
+                                  {formatQuoteWindow(
+                                    quote.preferredEndDate,
+                                    quote.preferredStartDate
+                                  )}
+                                </span>
+                                <span>
+                                  {formatVisitTime(quote.preferredVisitTime)}
+                                </span>
+                                {quote.scheduledVisitAt ? (
+                                  <span className="font-medium text-emerald-700">
+                                    Scheduled:{" "}
+                                    {formatScheduledVisit(
+                                      quote.scheduledVisitAt
+                                    )}
+                                  </span>
+                                ) : null}
+                              </div>
                             </div>
                             <Badge className={statusMeta.badge}>
                               {statusMeta.label}
@@ -257,24 +278,26 @@ const DashboardPage = () => {
                 </div>
               </div>
 
-              <div className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
+              <div className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
                 <div className="mb-5 flex items-center justify-between">
                   <div>
-                    <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-black/42">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
                       Finalized quotes
                     </p>
-                    <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-black">
+                    <h3 className="mt-1.5 text-xl font-bold tracking-[-0.04em] text-black">
                       Ready for review
                     </h3>
                   </div>
-                  <Camera className="h-5 w-5 text-black/35" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50">
+                    <TrendingUp className="h-4 w-4 text-emerald-600" />
+                  </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {finalizedQuotes.length === 0 ? (
-                    <div className="rounded-[1.5rem] border border-black/8 bg-[#f6f4ef] p-5 text-sm text-black/55">
-                      No finalized quotes yet. We’ll post pricing here after the
-                      property visit is complete.
+                    <div className="rounded-2xl border border-dashed border-black/8 bg-[#f4f2ec]/50 p-5 text-center text-sm text-black/40">
+                      No finalized quotes yet. Pricing will appear here after
+                      the property visit.
                     </div>
                   ) : (
                     finalizedQuotes.map((quote) => {
@@ -285,22 +308,22 @@ const DashboardPage = () => {
 
                       return (
                         <Link
-                          className="block rounded-[1.5rem] border border-black/8 bg-[#f6f4ef] p-4 transition hover:border-black/16"
+                          className="group block rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 transition-all hover:border-black/12 hover:shadow-sm"
                           key={quote.id}
                           params={{ quoteId: quote.id }}
                           to="/app/quotes/$quoteId"
                         >
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <p className="text-lg font-semibold tracking-[-0.04em] text-black">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold tracking-[-0.02em] text-black">
                                 {quote.serviceType}
                               </p>
-                              <p className="mt-1 text-sm text-black/58">
+                              <p className="mt-1 truncate text-xs text-black/45">
                                 {getPropertyDisplayAddress(quote.property)}
                               </p>
                               {hasEstimateRange ? (
-                                <p className="mt-3 text-sm font-medium text-black">
-                                  {formatCents(quote.estimateLow)} -{" "}
+                                <p className="mt-2 text-sm font-semibold text-emerald-700">
+                                  {formatCents(quote.estimateLow)} –{" "}
                                   {formatCents(quote.estimateHigh)}
                                 </p>
                               ) : null}
@@ -317,57 +340,73 @@ const DashboardPage = () => {
               </div>
             </section>
 
-            <section className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
+            {/* Properties */}
+            <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
               <div className="mb-5 flex items-center justify-between">
                 <div>
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-black/42">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
                     Saved properties
                   </p>
-                  <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-black">
+                  <h3 className="mt-1.5 text-xl font-bold tracking-[-0.04em] text-black">
                     Addresses on file
                   </h3>
                 </div>
+                <Link
+                  className="text-xs font-medium text-black/40 transition hover:text-black"
+                  to="/app/properties"
+                >
+                  View all →
+                </Link>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {properties.map((property) => (
                   <Link
-                    className="rounded-[1.5rem] border border-black/8 bg-[#f6f4ef] p-4 transition hover:border-black/16"
+                    className="group rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 transition-all hover:border-black/12 hover:shadow-sm"
                     key={property.id}
                     params={{ propertyId: property.id }}
                     to="/app/properties/$propertyId"
                   >
-                    <p className="text-lg font-semibold tracking-[-0.04em] text-black">
-                      {property.nickname ?? "Property"}
-                    </p>
-                    <p className="mt-2 text-sm text-black/58">
-                      {getPropertyDisplayAddress(property)}
-                    </p>
-                    <p className="text-sm text-black/58">
-                      {property.city}, {property.state} {property.zip}
-                    </p>
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50">
+                        <MapPin className="h-3.5 w-3.5 text-emerald-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold tracking-[-0.02em] text-black">
+                          {property.nickname ?? "Property"}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-black/45">
+                          {getPropertyDisplayAddress(property)}
+                        </p>
+                        <p className="truncate text-xs text-black/45">
+                          {property.city}, {property.state} {property.zip}
+                        </p>
+                      </div>
+                    </div>
                   </Link>
                 ))}
               </div>
             </section>
 
-            <section className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
+            {/* Billing */}
+            <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
               <div className="mb-5 flex items-center justify-between">
                 <div>
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-black/42">
-                    Billing and work
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+                    Billing
                   </p>
-                  <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-black">
-                    Recurring plans and active orders
+                  <h3 className="mt-1.5 text-xl font-bold tracking-[-0.04em] text-black">
+                    Plans and orders
                   </h3>
                 </div>
-                <FileText className="h-5 w-5 text-black/35" />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-[1.5rem] border border-black/8 bg-[#f6f4ef] p-4">
-                  <p className="text-sm text-black/52">Open invoices</p>
-                  <p className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-black">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-black/5 bg-[#f9f8f5] p-4">
+                  <p className="text-xs font-medium text-black/40">
+                    Open invoices
+                  </p>
+                  <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-black">
                     {
                       invoices.filter((invoice) =>
                         ["draft", "open"].includes(invoice.status)
@@ -375,9 +414,11 @@ const DashboardPage = () => {
                     }
                   </p>
                 </div>
-                <div className="rounded-[1.5rem] border border-black/8 bg-[#f6f4ef] p-4">
-                  <p className="text-sm text-black/52">Active work orders</p>
-                  <p className="mt-2 text-3xl font-semibold tracking-[-0.06em] text-black">
+                <div className="rounded-2xl border border-black/5 bg-[#f9f8f5] p-4">
+                  <p className="text-xs font-medium text-black/40">
+                    Active work orders
+                  </p>
+                  <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-black">
                     {
                       orders.filter((order) => order.status !== "completed")
                         .length
