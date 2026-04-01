@@ -12,10 +12,12 @@ import {
 } from "@fresh-mansions/ui/components/table";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import { UserPlus } from "lucide-react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
+import { EmptyState } from "@/components/empty-state";
 import { createCustomerBackfill } from "@/functions/admin/create-customer-backfill";
 import { validateAddress } from "@/functions/validate-address";
 import { authMiddleware } from "@/middleware/auth";
@@ -156,14 +158,21 @@ const AdminCustomersPage = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
-        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-black/42">
-          Manual client backfill
-        </p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-[-0.07em] text-black">
-          Add a legacy client with a temporary password
-        </h1>
+    <div className="stagger-children space-y-5">
+      <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+            <UserPlus className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+              Manual client backfill
+            </p>
+            <h1 className="text-2xl font-bold tracking-[-0.04em] text-black sm:text-3xl">
+              Add a legacy client with a temporary password
+            </h1>
+          </div>
+        </div>
 
         <form
           className="mt-8 grid gap-4 lg:grid-cols-2"
@@ -193,11 +202,11 @@ const AdminCustomersPage = () => {
             </div>
           ))}
 
-          <div className="rounded-[1.5rem] border border-black/8 bg-[#f6f4ef] p-4 lg:col-span-2">
+          <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 lg:col-span-2">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="font-medium text-black">Address verification</p>
-                <p className="text-sm text-black/55">
+                <p className="text-sm text-black/50">
                   Validate new addresses when possible. Use the override only
                   when importing legacy customer data that still needs cleanup.
                 </p>
@@ -216,7 +225,7 @@ const AdminCustomersPage = () => {
                 {isValidatingAddress ? "Validating..." : "Validate address"}
               </Button>
             </div>
-            <label className="mt-4 flex items-center gap-3 text-sm text-black/65">
+            <label className="mt-4 flex items-center gap-3 text-sm text-black/55">
               <input
                 checked={saveUnverifiedAddress}
                 onChange={(event) =>
@@ -240,7 +249,7 @@ const AdminCustomersPage = () => {
         </form>
 
         {createdPassword ? (
-          <div className="mt-6 rounded-[1.5rem] border border-[#d6f18b] bg-[#eef7d5] p-4 text-sm text-black">
+          <div className="mt-6 rounded-2xl border border-[#d6f18b] bg-[#eef7d5] p-4 text-sm text-black">
             Temporary password for{" "}
             <span className="font-semibold">{createdEmail}</span>:{" "}
             <code className="rounded bg-black px-2 py-1 text-white">
@@ -250,38 +259,46 @@ const AdminCustomersPage = () => {
         ) : null}
       </section>
 
-      <section className="overflow-hidden rounded-[2rem] border border-black/8 bg-white shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Properties</TableHead>
-              <TableHead>Plans</TableHead>
-              <TableHead>Joined</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {customers.map((customer) => (
-              <TableRow key={customer.id}>
-                <TableCell className="font-medium">
-                  {customer.user?.name ?? "Unknown"}
-                </TableCell>
-                <TableCell>{customer.user?.email ?? "—"}</TableCell>
-                <TableCell>{customer.phone ?? "—"}</TableCell>
-                <TableCell>{customer.properties.length}</TableCell>
-                <TableCell>{customer.subscriptions.length}</TableCell>
-                <TableCell>
-                  {customer.createdAt
-                    ? new Date(customer.createdAt).toLocaleDateString()
-                    : "—"}
-                </TableCell>
+      {customers.length === 0 ? (
+        <EmptyState
+          description="No customers have been added yet. Use the form above to backfill legacy clients."
+          illustration="sun"
+          title="No customers yet"
+        />
+      ) : (
+        <section className="overflow-hidden rounded-3xl border border-black/6 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Properties</TableHead>
+                <TableHead>Plans</TableHead>
+                <TableHead>Joined</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </section>
+            </TableHeader>
+            <TableBody>
+              {customers.map((customer) => (
+                <TableRow key={customer.id}>
+                  <TableCell className="font-medium">
+                    {customer.user?.name ?? "Unknown"}
+                  </TableCell>
+                  <TableCell>{customer.user?.email ?? "—"}</TableCell>
+                  <TableCell>{customer.phone ?? "—"}</TableCell>
+                  <TableCell>{customer.properties.length}</TableCell>
+                  <TableCell>{customer.subscriptions.length}</TableCell>
+                  <TableCell>
+                    {customer.createdAt
+                      ? new Date(customer.createdAt).toLocaleDateString()
+                      : "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </section>
+      )}
     </div>
   );
 };

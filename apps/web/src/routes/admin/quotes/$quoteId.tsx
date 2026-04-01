@@ -3,7 +3,15 @@ import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
 import { Label } from "@fresh-mansions/ui/components/label";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  Camera,
+  ClipboardList,
+  MapPin,
+  StickyNote,
+  User,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -53,7 +61,7 @@ const AdminQuoteDetailPage = () => {
 
   if (!quoteData) {
     return (
-      <div className="rounded-[2rem] border border-black/8 bg-white p-12 text-center text-black/55">
+      <div className="rounded-3xl border border-dashed border-black/10 bg-white p-12 text-center text-black/55 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
         Quote not found.
       </div>
     );
@@ -127,25 +135,25 @@ const AdminQuoteDetailPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="stagger-children space-y-5">
       <Link
-        className="inline-flex items-center gap-2 text-sm font-medium text-black/58 transition hover:text-black"
+        className="inline-flex items-center gap-2 text-sm font-medium text-black/50 transition hover:text-black"
         to="/admin/quotes"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to requests
       </Link>
 
-      <section className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
+      <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-black/42">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
               Request detail
             </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.07em] text-black">
+            <h1 className="mt-3 text-2xl font-bold tracking-[-0.04em] text-black sm:text-3xl">
               {quoteData.serviceType}
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-black/58">
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-black/55">
               {statusMeta.description}
             </p>
           </div>
@@ -153,12 +161,17 @@ const AdminQuoteDetailPage = () => {
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <section className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
-          <h2 className="text-2xl font-semibold tracking-[-0.05em] text-black">
-            Customer and property
-          </h2>
-          <div className="mt-5 space-y-4 text-sm text-black/60">
+      <div className="grid gap-5 xl:grid-cols-2">
+        <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+              <User className="h-5 w-5" />
+            </div>
+            <h2 className="text-xl font-bold tracking-[-0.03em] text-black">
+              Customer and property
+            </h2>
+          </div>
+          <div className="mt-5 space-y-4 text-sm text-black/55">
             <div>
               <p className="font-medium text-black">
                 {quoteData.customer?.user?.name ?? "Unknown customer"}
@@ -166,32 +179,43 @@ const AdminQuoteDetailPage = () => {
               <p>{quoteData.customer?.user?.email ?? "No email"}</p>
               <p>{quoteData.customer?.phone ?? "No phone"}</p>
             </div>
-            <div>
-              <p className="font-medium text-black">
-                {getPropertyDisplayAddress(quoteData.property)}
-              </p>
-              <p>Nickname: {quoteData.property?.nickname ?? "None"}</p>
+            <div className="flex items-start gap-2">
+              <MapPin className="mt-0.5 h-4 w-4 text-black/30" />
+              <div>
+                <p className="font-medium text-black">
+                  {getPropertyDisplayAddress(quoteData.property)}
+                </p>
+                <p>Nickname: {quoteData.property?.nickname ?? "None"}</p>
+              </div>
             </div>
-            <div>
-              <p>
-                Requested window:{" "}
-                {formatQuoteWindow(
-                  quoteData.preferredEndDate,
-                  quoteData.preferredStartDate
-                )}
-              </p>
-              <p>
-                Preferred arrival:{" "}
-                {formatVisitTime(quoteData.preferredVisitTime)}
-              </p>
+            <div className="flex items-start gap-2">
+              <Calendar className="mt-0.5 h-4 w-4 text-black/30" />
+              <div>
+                <p>
+                  Requested window:{" "}
+                  {formatQuoteWindow(
+                    quoteData.preferredEndDate,
+                    quoteData.preferredStartDate
+                  )}
+                </p>
+                <p>
+                  Preferred arrival:{" "}
+                  {formatVisitTime(quoteData.preferredVisitTime)}
+                </p>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
-          <h2 className="text-2xl font-semibold tracking-[-0.05em] text-black">
-            Operations
-          </h2>
+        <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <ClipboardList className="h-5 w-5" />
+            </div>
+            <h2 className="text-xl font-bold tracking-[-0.03em] text-black">
+              Operations
+            </h2>
+          </div>
 
           <div className="mt-5 space-y-6">
             <div className="space-y-3">
@@ -275,7 +299,7 @@ const AdminQuoteDetailPage = () => {
               ) : null}
             </div>
 
-            <div className="rounded-[1.5rem] border border-black/8 bg-[#f6f4ef] p-4 text-sm text-black/60">
+            <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 text-sm text-black/55">
               <p>
                 Current estimate:{" "}
                 {quoteData.estimateLow != null && quoteData.estimateHigh != null
@@ -292,26 +316,36 @@ const AdminQuoteDetailPage = () => {
         </section>
       </div>
 
-      <section className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
-        <h2 className="text-2xl font-semibold tracking-[-0.05em] text-black">
-          Notes
-        </h2>
-        <p className="mt-4 text-sm leading-7 text-black/60">
+      <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+            <StickyNote className="h-5 w-5" />
+          </div>
+          <h2 className="text-xl font-bold tracking-[-0.03em] text-black">
+            Notes
+          </h2>
+        </div>
+        <p className="mt-4 text-sm leading-7 text-black/55">
           {quoteData.notes ?? "No extra notes on this request."}
         </p>
       </section>
 
-      <section className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
-        <h2 className="text-2xl font-semibold tracking-[-0.05em] text-black">
-          Uploaded photos
-        </h2>
+      <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+            <Camera className="h-5 w-5" />
+          </div>
+          <h2 className="text-xl font-bold tracking-[-0.03em] text-black">
+            Uploaded photos
+          </h2>
+        </div>
         {quoteData.photos.length === 0 ? (
-          <p className="mt-3 text-sm text-black/58">No photos uploaded.</p>
+          <p className="mt-3 text-sm text-black/50">No photos uploaded.</p>
         ) : (
           <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {quoteData.photos.map((photo) => (
               <div
-                className="overflow-hidden rounded-[1.5rem] border border-black/8 bg-[#f6f4ef]"
+                className="overflow-hidden rounded-2xl border border-black/6 bg-[#f9f8f5]"
                 key={photo.id}
               >
                 <img
@@ -319,7 +353,7 @@ const AdminQuoteDetailPage = () => {
                   className="h-48 w-full object-cover"
                   src={getQuotePhotoUrl(photo)}
                 />
-                <div className="px-4 py-3 text-sm text-black/58">
+                <div className="px-4 py-3 text-sm text-black/50">
                   {photo.filename ?? "Uploaded photo"}
                 </div>
               </div>
