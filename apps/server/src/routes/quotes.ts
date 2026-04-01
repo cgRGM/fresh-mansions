@@ -136,31 +136,52 @@ app.post("/", async (c) => {
     });
   }
 
-  const propertyId = crypto.randomUUID();
-  const fullAddress = buildFullAddress({
-    addressLine2: body.addressLine2,
-    city: body.city,
-    formattedAddress: body.fullAddress || body.formattedAddress,
-    state: body.state,
-    street: body.street,
-    zip: body.zip,
-  });
-  await db.insert(property).values({
-    addressLine2: body.addressLine2 ?? null,
-    addressValidationStatus: body.validationStatus,
-    city: body.city,
-    customerId,
-    formattedAddress: fullAddress || body.formattedAddress || null,
-    id: propertyId,
-    latitude: body.latitude,
-    longitude: body.longitude,
-    nickname: body.nickname ?? null,
-    radarMetadata: body.radarMetadata ?? null,
-    radarPlaceId: body.radarPlaceId ?? null,
-    state: body.state,
-    street: body.street,
-    zip: body.zip,
-  });
+  let propertyId: string;
+  let fullAddress: null | string = null;
+
+  if ("propertyId" in body) {
+    const existingProperty = await db.query.property.findFirst({
+      where: and(
+        eq(property.customerId, customerId),
+        eq(property.id, body.propertyId)
+      ),
+    });
+
+    if (!existingProperty) {
+      return c.json({ error: "Property not found" }, 404);
+    }
+
+    propertyId = existingProperty.id;
+    fullAddress =
+      buildFullAddress(existingProperty) || existingProperty.formattedAddress;
+  } else {
+    propertyId = crypto.randomUUID();
+    fullAddress = buildFullAddress({
+      addressLine2: body.addressLine2,
+      city: body.city,
+      formattedAddress: body.fullAddress || body.formattedAddress,
+      state: body.state,
+      street: body.street,
+      zip: body.zip,
+    });
+
+    await db.insert(property).values({
+      addressLine2: body.addressLine2 ?? null,
+      addressValidationStatus: body.validationStatus,
+      city: body.city,
+      customerId,
+      formattedAddress: fullAddress || body.formattedAddress || null,
+      id: propertyId,
+      latitude: body.latitude,
+      longitude: body.longitude,
+      nickname: body.nickname ?? null,
+      radarMetadata: body.radarMetadata ?? null,
+      radarPlaceId: body.radarPlaceId ?? null,
+      state: body.state,
+      street: body.street,
+      zip: body.zip,
+    });
+  }
 
   const quoteId = crypto.randomUUID();
   await db.insert(quote).values({

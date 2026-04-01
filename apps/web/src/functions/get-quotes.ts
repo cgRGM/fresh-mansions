@@ -3,7 +3,10 @@ import { customer } from "@fresh-mansions/db/schema/domain";
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 
-import { withPropertyFullAddress } from "@/lib/quote-records";
+import {
+  withPropertiesFullAddress,
+  withPropertyFullAddress,
+} from "@/lib/quote-records";
 import { authMiddleware } from "@/middleware/auth";
 
 export const getQuotes = createServerFn({ method: "GET" })
@@ -13,6 +16,7 @@ export const getQuotes = createServerFn({ method: "GET" })
 
     if (!customerId) {
       return {
+        properties: [],
         quotes: [],
       };
     }
@@ -20,6 +24,9 @@ export const getQuotes = createServerFn({ method: "GET" })
     const customerRecord = await db.query.customer.findFirst({
       where: eq(customer.id, customerId),
       with: {
+        properties: {
+          orderBy: (properties, { desc }) => [desc(properties.createdAt)],
+        },
         quotes: {
           orderBy: (quotes, { desc }) => [desc(quotes.createdAt)],
           with: {
@@ -31,6 +38,7 @@ export const getQuotes = createServerFn({ method: "GET" })
     });
 
     return {
+      properties: withPropertiesFullAddress(customerRecord?.properties ?? []),
       quotes: (customerRecord?.quotes ?? []).map((record) =>
         withPropertyFullAddress(record)
       ),

@@ -153,7 +153,11 @@ const DashboardPage = () => {
                 Quick actions
               </p>
               <div className="mt-5 space-y-2.5">
-                <Link className="block" to="/get-quote">
+                <Link
+                  className="block"
+                  search={{ newRequest: "1" }}
+                  to="/app/quotes"
+                >
                   <div className="group flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.05] px-4 py-3.5 transition-all hover:border-[#d6f18b]/20 hover:bg-[#d6f18b]/8">
                     <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#d6f18b]/15">
                       <Plus className="h-4 w-4 text-[#d6f18b]" />
@@ -195,10 +199,10 @@ const DashboardPage = () => {
         {quotes.length === 0 ? (
           <EmptyState
             action={{
-              href: "/get-quote",
-              label: "Request your first estimate",
+              href: "/app/quotes?newRequest=1",
+              label: "Request your first service",
             }}
-            description="This account is ready, but nothing has been submitted yet. Start with the estimate visit flow and the dashboard will populate from there."
+            description="This account is ready. Submit a new request with a saved property or a new validated address and your dashboard will populate from there."
             illustration="grass"
             title="No requests or properties yet"
           />

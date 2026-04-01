@@ -87,8 +87,8 @@ const PropertyDetailPage = () => {
             <div className="mt-4">
               <EmptyState
                 action={{
-                  href: "/get-quote",
-                  label: "Request an estimate",
+                  href: `/app/quotes?newRequest=1&propertyId=${property.id}`,
+                  label: "Request service for this property",
                 }}
                 className="border-0 p-6 shadow-none"
                 description="No quotes have been created for this property yet."

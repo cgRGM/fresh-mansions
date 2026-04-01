@@ -1,10 +1,18 @@
 import { Badge } from "@fresh-mansions/ui/components/badge";
 import { buttonVariants } from "@fresh-mansions/ui/components/button";
 import { cn } from "@fresh-mansions/ui/lib/utils";
-import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  getRouteApi,
+  Link,
+  useNavigate,
+} from "@tanstack/react-router";
 import { ArrowRight, Plus } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import * as zod from "zod";
 
 import { EmptyState } from "@/components/empty-state";
+import { CustomerRequestSheet } from "@/components/quote/customer-request-sheet";
 import { getQuotes } from "@/functions/get-quotes";
 import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
@@ -17,12 +25,50 @@ import {
 } from "@/lib/quotes";
 
 const quotesRouteApi = getRouteApi("/app/quotes/");
+const quotesSearchSchema = zod.object({
+  newRequest: zod.string().optional(),
+  propertyId: zod.string().optional(),
+});
 
 const QuotesListPage = () => {
-  const { quotes } = quotesRouteApi.useLoaderData();
+  const navigate = useNavigate({ from: "/app/quotes/" });
+  const { properties, quotes } = quotesRouteApi.useLoaderData();
+  const search = quotesRouteApi.useSearch();
+  const [isRequestSheetOpen, setIsRequestSheetOpen] = useState(
+    search.newRequest === "1"
+  );
+
+  useEffect(() => {
+    setIsRequestSheetOpen(search.newRequest === "1");
+  }, [search.newRequest]);
+
+  const handleRequestSheetChange = useCallback(
+    (open: boolean) => {
+      setIsRequestSheetOpen(open);
+      navigate({
+        replace: true,
+        search: (current) => ({
+          ...current,
+          newRequest: open ? "1" : undefined,
+          propertyId: open ? current.propertyId : undefined,
+        }),
+      });
+    },
+    [navigate]
+  );
+  const openRequestSheet = useCallback(() => {
+    handleRequestSheetChange(true);
+  }, [handleRequestSheetChange]);
 
   return (
     <div className="min-h-full bg-[#f4f2ec] px-4 py-6 sm:px-6 lg:px-8">
+      <CustomerRequestSheet
+        initialPropertyId={search.propertyId}
+        onOpenChange={handleRequestSheetChange}
+        open={isRequestSheetOpen}
+        properties={properties}
+      />
+
       <div className="mx-auto max-w-6xl space-y-5 stagger-children">
         {/* Header */}
         <div className="flex flex-col gap-4 rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] sm:flex-row sm:items-end sm:justify-between">
@@ -34,28 +80,29 @@ const QuotesListPage = () => {
               Your estimate requests
             </h1>
           </div>
-          <Link
+          <button
             className={cn(
               buttonVariants({
                 className:
                   "h-11 rounded-full bg-[#0a1a10] px-5 text-sm text-white hover:bg-[#0a1a10]/90",
               })
             )}
-            to="/get-quote"
+            onClick={openRequestSheet}
+            type="button"
           >
             New request
             <Plus className="ml-2 h-4 w-4" />
-          </Link>
+          </button>
         </div>
 
         {/* Content */}
         {quotes.length === 0 ? (
           <EmptyState
             action={{
-              href: "/get-quote",
-              label: "Request your first estimate",
+              href: "/app/quotes?newRequest=1",
+              label: "Request your first service",
             }}
-            description="Start with a new estimate visit request and your quote history will build from there."
+            description="Use a saved property or add a new address without leaving your dashboard flow."
             illustration="leaf"
             title="No requests yet"
           />
@@ -127,4 +174,5 @@ const QuotesListPage = () => {
 export const Route = createFileRoute("/app/quotes/")({
   component: QuotesListPage,
   loader: () => getQuotes(),
+  validateSearch: quotesSearchSchema,
 });

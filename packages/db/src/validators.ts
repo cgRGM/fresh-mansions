@@ -152,26 +152,13 @@ export const scheduleSearchSchema = dateWindowSchema.extend({
   preferredVisitTime: preferredVisitTimeSchema.optional(),
 });
 
-export const quoteIntakeSchema = dateWindowSchema
+const quoteIntakeBaseSchema = dateWindowSchema
   .extend({
-    addressLine2: zod.string().optional(),
-    city: zod.string().min(1, "City is required"),
-    formattedAddress: zod.string().optional(),
-    fullAddress: zod.string().min(1, "A validated full address is required"),
-    latitude: zod.number(),
-    longitude: zod.number(),
-    nickname: zod.string().optional(),
     notes: zod.string().optional(),
     phone: zod.string().optional(),
     preferredVisitTime: preferredVisitTimeSchema,
     propertySize: propertySizeEnum.optional(),
-    radarMetadata: zod.record(zod.string(), zod.unknown()).optional(),
-    radarPlaceId: zod.string().optional(),
     serviceType: serviceTypeEnum,
-    state: zod.string().min(2, "State is required"),
-    street: zod.string().min(1, "Street address is required"),
-    validationStatus: zod.literal("validated"),
-    zip: zod.string().min(5, "ZIP code is required"),
   })
   .refine(({ endDate }) => Boolean(endDate), {
     message: "End date is required",
@@ -181,6 +168,31 @@ export const quoteIntakeSchema = dateWindowSchema
     message: "Start date is required",
     path: ["startDate"],
   });
+
+const existingPropertyQuoteIntakeSchema = quoteIntakeBaseSchema.extend({
+  propertyId: zod.string().min(1, "Select a saved property"),
+});
+
+const newPropertyQuoteIntakeSchema = quoteIntakeBaseSchema.extend({
+  addressLine2: zod.string().optional(),
+  city: zod.string().min(1, "City is required"),
+  formattedAddress: zod.string().optional(),
+  fullAddress: zod.string().min(1, "A validated full address is required"),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  nickname: zod.string().optional(),
+  radarMetadata: zod.record(zod.string(), zod.unknown()).optional(),
+  radarPlaceId: zod.string().optional(),
+  state: zod.string().min(2, "State is required"),
+  street: zod.string().min(1, "Street address is required"),
+  validationStatus: zod.literal("validated"),
+  zip: zod.string().min(5, "ZIP code is required"),
+});
+
+export const quoteIntakeSchema = zod.union([
+  existingPropertyQuoteIntakeSchema,
+  newPropertyQuoteIntakeSchema,
+]);
 export type QuoteIntakeInput = zod.infer<typeof quoteIntakeSchema>;
 
 export const customerBackfillSchema = zod

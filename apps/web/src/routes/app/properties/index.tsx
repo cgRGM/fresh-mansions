@@ -31,10 +31,10 @@ const PropertiesListPage = () => {
         {properties.length === 0 ? (
           <EmptyState
             action={{
-              href: "/get-quote",
-              label: "Request your first estimate",
+              href: "/app/quotes?newRequest=1",
+              label: "Request your first service",
             }}
-            description="Properties are added when you request a quote. Start with an estimate visit and your property list will build from there."
+            description="Properties are saved as you request service. Start with a new request and your property list will build from there."
             illustration="sun"
             title="No properties yet"
           />
