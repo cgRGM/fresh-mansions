@@ -1,3 +1,4 @@
+import { hasRoleAccess } from "@fresh-mansions/db/roles";
 import type { UserRole } from "@fresh-mansions/db/validators";
 import { createMiddleware } from "hono/factory";
 
@@ -19,7 +20,7 @@ export const requireRole = (...roles: UserRole[]) =>
   createMiddleware(async (c, next) => {
     const session = c.get("session") as AppSession | undefined;
 
-    if (!session || !roles.includes(session.appUser.role)) {
+    if (!session || !hasRoleAccess(session.appUser.role, roles)) {
       return c.json({ error: "Forbidden" }, 403);
     }
 

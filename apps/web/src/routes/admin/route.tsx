@@ -14,6 +14,7 @@ import {
   HardHat,
 } from "lucide-react";
 
+import { SuperUserViewSwitcher } from "@/components/super-user-view-switcher";
 import { getUser } from "@/functions/get-user";
 
 const navItems = [
@@ -62,27 +63,34 @@ const AdminLayout = () => {
           <h1 className="text-lg font-semibold md:hidden">
             FreshMansions Admin
           </h1>
-          <div className="hidden md:block" />
+          <div className="hidden md:block">
+            <SuperUserViewSwitcher session={session} />
+          </div>
           <div className="flex items-center gap-2 text-sm text-black/60">
             <span>{session.user.email}</span>
           </div>
         </header>
 
-        <nav className="flex gap-1 overflow-x-auto border-b border-black/8 bg-white px-4 py-2 md:hidden">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              to={item.href}
-              className="flex items-center whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium text-black/68 hover:bg-black/5"
-              activeProps={{
-                className: "bg-black text-white",
-              }}
-            >
-              <item.icon className="mr-1 h-3 w-3" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="border-b border-black/8 bg-white px-4 pb-2 pt-2 md:hidden">
+          <div className="pb-2">
+            <SuperUserViewSwitcher session={session} />
+          </div>
+          <nav className="flex gap-1 overflow-x-auto">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                to={item.href}
+                className="flex items-center whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium text-black/68 hover:bg-black/5"
+                activeProps={{
+                  className: "bg-black text-white",
+                }}
+              >
+                <item.icon className="mr-1 h-3 w-3" />
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
 
         <main className="flex-1 overflow-auto p-6">
           <Outlet />
@@ -100,7 +108,7 @@ export const Route = createFileRoute("/admin")({
       throw redirect({ to: "/login" });
     }
 
-    if (session.appUser.role !== "admin") {
+    if (!["admin", "super_user"].includes(session.appUser.role)) {
       throw redirect({ to: "/app" });
     }
 

@@ -1,6 +1,7 @@
 import { Button } from "@fresh-mansions/ui/components/button";
 import {
   createFileRoute,
+  getRouteApi,
   Link,
   Outlet,
   redirect,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { useCallback, useState } from "react";
 
+import { SuperUserViewSwitcher } from "@/components/super-user-view-switcher";
 import { getUser } from "@/functions/get-user";
 import { authClient } from "@/lib/auth-client";
 
@@ -37,11 +39,15 @@ const mobileLinks = [
   { href: "/app/profile", icon: User, label: "Profile" },
 ] as const;
 
+const appRouteApi = getRouteApi("/app");
+
 const AppLayout = () => {
   const { data: session } = authClient.useSession();
+  const routeContext = appRouteApi.useRouteContext();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const userName = session?.user?.name ?? "User";
+  const appSession = routeContext.user;
 
   const handleSignOut = useCallback(async () => {
     await authClient.signOut();
@@ -110,6 +116,12 @@ const AppLayout = () => {
                   </Link>
                 ))}
               </nav>
+              <div className="px-4 pb-2">
+                <SuperUserViewSwitcher
+                  className="rounded-2xl border border-white/10 p-3 text-white"
+                  session={appSession}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -138,6 +150,10 @@ const AppLayout = () => {
           ))}
         </nav>
         <div className="border-t border-white/10 p-4">
+          <SuperUserViewSwitcher
+            className="mb-4 rounded-2xl border border-white/10 p-3 text-white"
+            session={appSession}
+          />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/8 text-sm font-medium text-[#d6f18b]">

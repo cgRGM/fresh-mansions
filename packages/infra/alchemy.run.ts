@@ -59,6 +59,7 @@ const turnstileSecretKey = process.env.TURNSTILE_SECRET_KEY
   ? alchemy.secret(process.env.TURNSTILE_SECRET_KEY, "TURNSTILE_SECRET_KEY")
   : undefined;
 const radarPublishableKey = process.env.VITE_RADAR_PUBLISHABLE_KEY;
+const superUserEmails = process.env.SUPER_USER_EMAILS;
 const turnstileSiteKey = process.env.VITE_TURNSTILE_SITE_KEY;
 
 const db = await D1Database("database", {
@@ -84,6 +85,7 @@ const webBindings = {
   ...(radarPublishableKey
     ? { VITE_RADAR_PUBLISHABLE_KEY: radarPublishableKey }
     : {}),
+  ...(superUserEmails ? { SUPER_USER_EMAILS: superUserEmails } : {}),
   ...(stripeSecretKey ? { STRIPE_SECRET_KEY: stripeSecretKey } : {}),
   ...(stripeWebhookSecret
     ? { STRIPE_WEBHOOK_SECRET: stripeWebhookSecret }
@@ -98,6 +100,7 @@ const serverBindings = {
   CORS_ORIGIN: corsOrigin,
   DB: db,
   STORAGE: storage,
+  ...(superUserEmails ? { SUPER_USER_EMAILS: superUserEmails } : {}),
   ...(radarSecretKey ? { RADAR_SECRET_KEY: radarSecretKey } : {}),
   ...(stripeSecretKey ? { STRIPE_SECRET_KEY: stripeSecretKey } : {}),
   ...(stripeWebhookSecret

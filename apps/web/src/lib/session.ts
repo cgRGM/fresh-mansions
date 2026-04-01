@@ -1,8 +1,10 @@
 import { auth } from "@fresh-mansions/auth";
 import { db } from "@fresh-mansions/db";
+import { isSuperUserEmail } from "@fresh-mansions/db/roles";
 import { user } from "@fresh-mansions/db/schema/auth";
 import { contractor, customer } from "@fresh-mansions/db/schema/domain";
 import type { UserRole } from "@fresh-mansions/db/validators";
+import { env } from "@fresh-mansions/env/server";
 import { eq } from "drizzle-orm";
 
 type AuthSession = Awaited<ReturnType<typeof auth.api.getSession>>;
@@ -41,12 +43,48 @@ export const getAppSession = async (
     }),
   ]);
 
+  const effectiveRole = isSuperUserEmail(
+    session.user.email,
+    env.SUPER_USER_EMAILS
+  )
+    ? "super_user"
+    : (userRecord.role as UserRole);
+
+  const resolvedCustomerRecord =
+    effectiveRole === "super_user" && !customerRecord
+      ? await db
+          .insert(customer)
+          .values({
+            id: crypto.randomUUID(),
+            phone: null,
+            userId: session.user.id,
+          })
+          .returning()
+          .then((records) => records[0] ?? null)
+      : customerRecord;
+
+  const resolvedContractorRecord =
+    effectiveRole === "super_user" && !contractorRecord
+      ? await db
+          .insert(contractor)
+          .values({
+            contactEmail: session.user.email,
+            contactPhone: null,
+            displayName: session.user.name,
+            id: crypto.randomUUID(),
+            status: "active",
+            userId: session.user.id,
+          })
+          .returning()
+          .then((records) => records[0] ?? null)
+      : contractorRecord;
+
   return {
     ...session,
     appUser: {
-      contractorId: contractorRecord?.id ?? null,
-      customerId: customerRecord?.id ?? null,
-      role: userRecord.role as UserRole,
+      contractorId: resolvedContractorRecord?.id ?? null,
+      customerId: resolvedCustomerRecord?.id ?? null,
+      role: effectiveRole,
     },
   };
 };

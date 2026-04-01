@@ -1,6 +1,11 @@
 import * as zod from "zod";
 
-export const userRoleEnum = zod.enum(["customer", "admin", "contractor"]);
+export const userRoleEnum = zod.enum([
+  "customer",
+  "admin",
+  "contractor",
+  "super_user",
+]);
 export type UserRole = zod.infer<typeof userRoleEnum>;
 
 export const serviceTypeEnum = zod.enum([
