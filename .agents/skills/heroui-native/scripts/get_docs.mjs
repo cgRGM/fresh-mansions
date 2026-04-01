@@ -27,9 +27,9 @@ async function fetchApi(path) {
   // API expects: native/getting-started/theming (route is /v1/docs/:path(*))
   const apiPath = path.startsWith("/docs/")
     ? path.slice(6) // Remove /docs/ prefix
-    : (path.startsWith("/")
+    : path.startsWith("/")
       ? path.slice(1) // Remove leading /
-      : path);
+      : path;
 
   const separator = "?";
   const url = `${API_BASE}/v1/docs/${apiPath}${separator}${APP_PARAM}`;

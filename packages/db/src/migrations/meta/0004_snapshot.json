@@ -103,9 +103,7 @@
       "indexes": {
         "account_userId_idx": {
           "name": "account_userId_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -114,12 +112,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -192,16 +186,12 @@
       "indexes": {
         "session_token_unique": {
           "name": "session_token_unique",
-          "columns": [
-            "token"
-          ],
+          "columns": ["token"],
           "isUnique": true
         },
         "session_userId_idx": {
           "name": "session_userId_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -210,12 +200,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -298,9 +284,7 @@
       "indexes": {
         "user_email_unique": {
           "name": "user_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         }
       },
@@ -360,9 +344,7 @@
       "indexes": {
         "verification_identifier_idx": {
           "name": "verification_identifier_idx",
-          "columns": [
-            "identifier"
-          ],
+          "columns": ["identifier"],
           "isUnique": false
         }
       },
@@ -475,16 +457,12 @@
       "indexes": {
         "contractor_user_id_unique": {
           "name": "contractor_user_id_unique",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": true
         },
         "contractor_userId_idx": {
           "name": "contractor_userId_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -493,12 +471,8 @@
           "name": "contractor_user_id_user_id_fk",
           "tableFrom": "contractor",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -551,16 +525,12 @@
       "indexes": {
         "customer_user_id_unique": {
           "name": "customer_user_id_unique",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": true
         },
         "customer_userId_idx": {
           "name": "customer_userId_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -569,12 +539,8 @@
           "name": "customer_user_id_user_id_fk",
           "tableFrom": "customer",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -693,16 +659,12 @@
       "indexes": {
         "invoice_customerId_idx": {
           "name": "invoice_customerId_idx",
-          "columns": [
-            "customer_id"
-          ],
+          "columns": ["customer_id"],
           "isUnique": false
         },
         "invoice_workOrderId_idx": {
           "name": "invoice_workOrderId_idx",
-          "columns": [
-            "work_order_id"
-          ],
+          "columns": ["work_order_id"],
           "isUnique": false
         }
       },
@@ -711,12 +673,8 @@
           "name": "invoice_customer_id_customer_id_fk",
           "tableFrom": "invoice",
           "tableTo": "customer",
-          "columnsFrom": [
-            "customer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["customer_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -724,12 +682,8 @@
           "name": "invoice_work_order_id_work_order_id_fk",
           "tableFrom": "invoice",
           "tableTo": "work_order",
-          "columnsFrom": [
-            "work_order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["work_order_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -868,9 +822,7 @@
       "indexes": {
         "property_customerId_idx": {
           "name": "property_customerId_idx",
-          "columns": [
-            "customer_id"
-          ],
+          "columns": ["customer_id"],
           "isUnique": false
         }
       },
@@ -879,12 +831,8 @@
           "name": "property_customer_id_customer_id_fk",
           "tableFrom": "property",
           "tableTo": "customer",
-          "columnsFrom": [
-            "customer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["customer_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1022,16 +970,12 @@
       "indexes": {
         "quote_customerId_idx": {
           "name": "quote_customerId_idx",
-          "columns": [
-            "customer_id"
-          ],
+          "columns": ["customer_id"],
           "isUnique": false
         },
         "quote_propertyId_idx": {
           "name": "quote_propertyId_idx",
-          "columns": [
-            "property_id"
-          ],
+          "columns": ["property_id"],
           "isUnique": false
         }
       },
@@ -1040,12 +984,8 @@
           "name": "quote_customer_id_customer_id_fk",
           "tableFrom": "quote",
           "tableTo": "customer",
-          "columnsFrom": [
-            "customer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["customer_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1053,12 +993,8 @@
           "name": "quote_property_id_property_id_fk",
           "tableFrom": "quote",
           "tableTo": "property",
-          "columnsFrom": [
-            "property_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["property_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1110,9 +1046,7 @@
       "indexes": {
         "quotePhoto_quoteId_idx": {
           "name": "quotePhoto_quoteId_idx",
-          "columns": [
-            "quote_id"
-          ],
+          "columns": ["quote_id"],
           "isUnique": false
         }
       },
@@ -1121,12 +1055,8 @@
           "name": "quote_photo_quote_id_quote_id_fk",
           "tableFrom": "quote_photo",
           "tableTo": "quote",
-          "columnsFrom": [
-            "quote_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["quote_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1194,16 +1124,12 @@
       "indexes": {
         "route_contractorId_idx": {
           "name": "route_contractorId_idx",
-          "columns": [
-            "contractor_id"
-          ],
+          "columns": ["contractor_id"],
           "isUnique": false
         },
         "route_routeDate_idx": {
           "name": "route_routeDate_idx",
-          "columns": [
-            "route_date"
-          ],
+          "columns": ["route_date"],
           "isUnique": false
         }
       },
@@ -1212,12 +1138,8 @@
           "name": "route_contractor_id_contractor_id_fk",
           "tableFrom": "route",
           "tableTo": "contractor",
-          "columnsFrom": [
-            "contractor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["contractor_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1284,16 +1206,12 @@
       "indexes": {
         "routeStop_routeId_idx": {
           "name": "routeStop_routeId_idx",
-          "columns": [
-            "route_id"
-          ],
+          "columns": ["route_id"],
           "isUnique": false
         },
         "routeStop_workOrderId_idx": {
           "name": "routeStop_workOrderId_idx",
-          "columns": [
-            "work_order_id"
-          ],
+          "columns": ["work_order_id"],
           "isUnique": false
         }
       },
@@ -1302,12 +1220,8 @@
           "name": "route_stop_route_id_route_id_fk",
           "tableFrom": "route_stop",
           "tableTo": "route",
-          "columnsFrom": [
-            "route_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["route_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1315,12 +1229,8 @@
           "name": "route_stop_work_order_id_work_order_id_fk",
           "tableFrom": "route_stop",
           "tableTo": "work_order",
-          "columnsFrom": [
-            "work_order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["work_order_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1402,9 +1312,7 @@
       "indexes": {
         "stripe_event_stripe_event_id_unique": {
           "name": "stripe_event_stripe_event_id_unique",
-          "columns": [
-            "stripe_event_id"
-          ],
+          "columns": ["stripe_event_id"],
           "isUnique": true
         }
       },
@@ -1517,9 +1425,7 @@
       "indexes": {
         "subscription_customerId_idx": {
           "name": "subscription_customerId_idx",
-          "columns": [
-            "customer_id"
-          ],
+          "columns": ["customer_id"],
           "isUnique": false
         }
       },
@@ -1528,12 +1434,8 @@
           "name": "subscription_customer_id_customer_id_fk",
           "tableFrom": "subscription",
           "tableTo": "customer",
-          "columnsFrom": [
-            "customer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["customer_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1615,16 +1517,12 @@
       "indexes": {
         "workOrder_quoteId_idx": {
           "name": "workOrder_quoteId_idx",
-          "columns": [
-            "quote_id"
-          ],
+          "columns": ["quote_id"],
           "isUnique": false
         },
         "workOrder_contractorId_idx": {
           "name": "workOrder_contractorId_idx",
-          "columns": [
-            "contractor_id"
-          ],
+          "columns": ["contractor_id"],
           "isUnique": false
         }
       },
@@ -1633,12 +1531,8 @@
           "name": "work_order_contractor_id_contractor_id_fk",
           "tableFrom": "work_order",
           "tableTo": "contractor",
-          "columnsFrom": [
-            "contractor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["contractor_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1646,12 +1540,8 @@
           "name": "work_order_quote_id_quote_id_fk",
           "tableFrom": "work_order",
           "tableTo": "quote",
-          "columnsFrom": [
-            "quote_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["quote_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

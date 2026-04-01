@@ -63,9 +63,7 @@ const AdminLayout = () => {
         </button>
         <div className="flex items-center gap-2">
           <Sprout className="h-5 w-5 text-[#d6f18b]" />
-          <span className="text-lg font-bold tracking-[-0.04em]">
-            FM Admin
-          </span>
+          <span className="text-lg font-bold tracking-[-0.04em]">FM Admin</span>
         </div>
         <div className="w-9" />
       </div>
