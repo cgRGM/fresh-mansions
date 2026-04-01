@@ -2,8 +2,9 @@ import { Badge } from "@fresh-mansions/ui/components/badge";
 import { buttonVariants } from "@fresh-mansions/ui/components/button";
 import { cn } from "@fresh-mansions/ui/lib/utils";
 import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router";
-import { ArrowRight, FileText, Plus } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 
+import { EmptyState } from "@/components/empty-state";
 import { getQuotes } from "@/functions/get-quotes";
 import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
@@ -20,44 +21,45 @@ const QuotesListPage = () => {
   const { quotes } = quotesRouteApi.useLoaderData();
 
   return (
-    <div className="min-h-full bg-[#f6f4ef] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-col gap-4 rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)] lg:flex-row lg:items-end lg:justify-between">
+    <div className="min-h-full bg-[#f4f2ec] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl space-y-5 stagger-children">
+        {/* Header */}
+        <div className="flex flex-col gap-4 rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-black/42">
-              Quotes and requests
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+              Quotes & requests
             </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.07em] text-black">
-              Every estimate request in one view
+            <h1 className="mt-2 text-2xl font-bold tracking-[-0.04em] text-black sm:text-3xl">
+              Your estimate requests
             </h1>
           </div>
           <Link
             className={cn(
               buttonVariants({
                 className:
-                  "h-12 rounded-full bg-black px-5 text-white hover:bg-black/90",
+                  "h-11 rounded-full bg-[#0a1a10] px-5 text-sm text-white hover:bg-[#0a1a10]/90",
               })
             )}
             to="/get-quote"
           >
-            Request another visit
+            New request
             <Plus className="ml-2 h-4 w-4" />
           </Link>
         </div>
 
+        {/* Content */}
         {quotes.length === 0 ? (
-          <div className="rounded-[2rem] border border-dashed border-black/12 bg-white p-12 text-center shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
-            <FileText className="mx-auto h-12 w-12 text-black/22" />
-            <h2 className="mt-6 text-2xl font-semibold tracking-[-0.05em] text-black">
-              No requests yet
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-black/58">
-              Start with a new estimate visit request and the quote history will
-              build from there.
-            </p>
-          </div>
+          <EmptyState
+            action={{
+              href: "/get-quote",
+              label: "Request your first estimate",
+            }}
+            description="Start with a new estimate visit request and your quote history will build from there."
+            illustration="leaf"
+            title="No requests yet"
+          />
         ) : (
-          <div className="grid gap-4">
+          <div className="space-y-3">
             {quotes.map((quote) => {
               const statusMeta = getQuoteStatusMeta(quote.status);
               const hasEstimateRange =
@@ -66,53 +68,49 @@ const QuotesListPage = () => {
 
               return (
                 <Link
-                  className="block rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)] transition hover:border-black/16"
+                  className="group block rounded-3xl border border-black/6 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all hover:border-black/12 hover:shadow-md sm:p-6"
                   key={quote.id}
                   params={{ quoteId: quote.id }}
                   to="/app/quotes/$quoteId"
                 >
-                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="text-2xl font-semibold tracking-[-0.05em] text-black">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <h2 className="text-lg font-bold tracking-[-0.03em] text-black">
                           {quote.serviceType}
                         </h2>
                         <Badge className={statusMeta.badge}>
                           {statusMeta.label}
                         </Badge>
                       </div>
-                      <p className="text-sm text-black/58">
+                      <p className="text-sm text-black/50">
                         {getPropertyDisplayAddress(quote.property)}
                       </p>
-                      <div className="grid gap-2 text-sm text-black/58 sm:grid-cols-2">
-                        <p>
-                          Visit window:{" "}
+                      <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-black/40">
+                        <span>
+                          Window:{" "}
                           {formatQuoteWindow(
                             quote.preferredEndDate,
                             quote.preferredStartDate
                           )}
-                        </p>
-                        <p>
-                          Preferred time:{" "}
-                          {formatVisitTime(quote.preferredVisitTime)}
-                        </p>
-                        <p>
-                          Scheduled visit:{" "}
-                          {formatScheduledVisit(quote.scheduledVisitAt)}
-                        </p>
-                        <p>
+                        </span>
+                        <span>
+                          Time: {formatVisitTime(quote.preferredVisitTime)}
+                        </span>
+                        <span>
+                          Visit: {formatScheduledVisit(quote.scheduledVisitAt)}
+                        </span>
+                        <span>
                           {hasEstimateRange
-                            ? `Estimate: ${formatCents(quote.estimateLow)} - ${formatCents(
-                                quote.estimateHigh
-                              )}`
-                            : "Estimate pending site review"}
-                        </p>
+                            ? `${formatCents(quote.estimateLow)} – ${formatCents(quote.estimateHigh)}`
+                            : "Estimate pending"}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="inline-flex items-center gap-2 text-sm font-medium text-black/60">
-                      Open detail
-                      <ArrowRight className="h-4 w-4" />
+                    <div className="flex items-center gap-1.5 text-sm font-medium text-black/35 transition-colors group-hover:text-black/70">
+                      View details
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                     </div>
                   </div>
                 </Link>
