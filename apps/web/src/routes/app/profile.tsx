@@ -21,7 +21,7 @@ function ProfilePage() {
 
   return (
     <div className="min-h-full bg-[#f4f2ec] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-3xl space-y-5 stagger-children">
+      <div className="mx-auto max-w-6xl space-y-5 stagger-children">
         {/* Header */}
         <div className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
@@ -33,7 +33,7 @@ function ProfilePage() {
         </div>
 
         {/* Profile card */}
-        <div className="relative overflow-hidden rounded-3xl border border-black/6 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        <div className="relative max-w-2xl overflow-hidden rounded-3xl border border-black/6 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
           {/* Decorative header band */}
           <div className="relative h-28 bg-gradient-to-br from-[#0a1a10] via-[#132b1a] to-[#0f0f0f]">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,_oklch(0.6_0.15_140_/_0.15),_transparent_60%)]" />
