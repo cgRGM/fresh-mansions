@@ -1,10 +1,11 @@
 import { db } from "@fresh-mansions/db";
 import {
   contractor,
+  route,
   routeStop,
   workOrder,
 } from "@fresh-mansions/db/schema/domain";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { createApp, requireSession } from "../lib/hono";
@@ -144,6 +145,78 @@ app.post("/stops/:id/complete", async (c) => {
     );
 
   return c.json({ ok: true });
+});
+
+app.get("/me/routes", async (c) => {
+  const session = requireSession(c);
+
+  if (!session.appUser.contractorId) {
+    return c.json({ routes: [] });
+  }
+
+  const routes = await db.query.route.findMany({
+    orderBy: [desc(route.routeDate)],
+    where: eq(route.contractorId, session.appUser.contractorId),
+    with: {
+      stops: {
+        orderBy: (table, { asc }) => [asc(table.sequence)],
+        with: {
+          workOrder: {
+            with: {
+              quote: {
+                with: {
+                  customer: { with: { user: true } },
+                  property: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return c.json({ routes });
+});
+
+app.get("/me/work-orders", async (c) => {
+  const session = requireSession(c);
+
+  if (!session.appUser.contractorId) {
+    return c.json({ workOrders: [] });
+  }
+
+  const workOrders = await db.query.workOrder.findMany({
+    orderBy: [desc(workOrder.createdAt)],
+    where: eq(workOrder.contractorId, session.appUser.contractorId),
+    with: {
+      quote: {
+        with: {
+          customer: { with: { user: true } },
+          property: true,
+        },
+      },
+    },
+  });
+
+  return c.json({ workOrders });
+});
+
+app.get("/me/profile", async (c) => {
+  const session = requireSession(c);
+
+  if (!session.appUser.contractorId) {
+    return c.json({ contractor: null });
+  }
+
+  const contractorRecord = await db.query.contractor.findFirst({
+    where: eq(contractor.id, session.appUser.contractorId),
+    with: {
+      user: true,
+    },
+  });
+
+  return c.json({ contractor: contractorRecord });
 });
 
 export default app;
