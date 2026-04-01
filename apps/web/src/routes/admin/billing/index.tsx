@@ -3,10 +3,12 @@ import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
 import { Label } from "@fresh-mansions/ui/components/label";
 import { createFileRoute } from "@tanstack/react-router";
+import { CreditCard, Receipt } from "lucide-react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
+import { EmptyState } from "@/components/empty-state";
 import { listBilling } from "@/functions/admin/list-billing";
 import { apiClient } from "@/lib/api-client";
 import { formatCents } from "@/lib/estimates";
@@ -144,23 +146,30 @@ function AdminBillingPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-2">
+    <div className="stagger-children space-y-5">
+      <section className="grid gap-5 xl:grid-cols-2">
         <form
-          className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]"
+          className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]"
           onSubmit={handleInvoiceCreate}
         >
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-black/42">
-            Invoices
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-[-0.07em] text-black">
-            Send one-off invoices from the operations panel.
-          </h1>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+              <Receipt className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+                Invoices
+              </p>
+              <h1 className="text-xl font-bold tracking-[-0.03em] text-black sm:text-2xl">
+                Send one-off invoices
+              </h1>
+            </div>
+          </div>
           <div className="mt-6 grid gap-4">
             <div className="space-y-2">
               <Label htmlFor="invoice-customer">Customer</Label>
               <select
-                className="h-12 w-full rounded-2xl border border-black/10 bg-white px-3"
+                className="h-12 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
                 id="invoice-customer"
                 name="customerId"
                 onChange={handleInvoiceChange}
@@ -216,20 +225,27 @@ function AdminBillingPage() {
         </form>
 
         <form
-          className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]"
+          className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]"
           onSubmit={handleSubscriptionCreate}
         >
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-black/42">
-            Monthly plans
-          </p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-[-0.07em] text-black">
-            Start recurring billing for ongoing maintenance.
-          </h2>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+              <CreditCard className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+                Monthly plans
+              </p>
+              <h2 className="text-xl font-bold tracking-[-0.03em] text-black sm:text-2xl">
+                Start recurring billing
+              </h2>
+            </div>
+          </div>
           <div className="mt-6 grid gap-4">
             <div className="space-y-2">
               <Label htmlFor="subscription-customer">Customer</Label>
               <select
-                className="h-12 w-full rounded-2xl border border-black/10 bg-white px-3"
+                className="h-12 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
                 id="subscription-customer"
                 name="customerId"
                 onChange={handleSubscriptionChange}
@@ -247,7 +263,7 @@ function AdminBillingPage() {
               <div className="space-y-2">
                 <Label htmlFor="interval">Interval</Label>
                 <select
-                  className="h-12 w-full rounded-2xl border border-black/10 bg-white px-3"
+                  className="h-12 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
                   id="interval"
                   name="interval"
                   onChange={handleSubscriptionChange}
@@ -300,72 +316,87 @@ function AdminBillingPage() {
         </form>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <article className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
-          <h3 className="text-2xl font-semibold tracking-[-0.05em] text-black">
+      <section className="grid gap-5 xl:grid-cols-2">
+        <article className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          <h3 className="text-xl font-bold tracking-[-0.03em] text-black">
             Recent invoices
           </h3>
-          <div className="mt-5 space-y-3">
-            {invoices.map((invoice) => (
-              <div
-                className="rounded-[1.5rem] border border-black/8 bg-[#f6f4ef] p-4"
-                key={invoice.id}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-medium text-black">
-                      {invoice.customer?.user?.name ?? "Unknown customer"}
-                    </p>
-                    <p className="text-sm text-black/58">
-                      {formatCents(invoice.amountDue)} due
-                    </p>
-                    {invoice.hostedInvoiceUrl ? (
-                      <a
-                        className="mt-2 inline-block text-sm font-medium text-black underline"
-                        href={invoice.hostedInvoiceUrl}
-                        rel="noreferrer noopener"
-                        target="_blank"
-                      >
-                        Open hosted invoice
-                      </a>
-                    ) : null}
+          {invoices.length === 0 ? (
+            <div className="mt-5 rounded-2xl border border-dashed border-black/8 bg-[#f9f8f5] p-8 text-center">
+              <p className="text-sm text-black/45">No invoices created yet.</p>
+            </div>
+          ) : (
+            <div className="mt-5 space-y-3">
+              {invoices.map((invoice) => (
+                <div
+                  className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4"
+                  key={invoice.id}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-medium text-black">
+                        {invoice.customer?.user?.name ?? "Unknown customer"}
+                      </p>
+                      <p className="text-sm text-black/50">
+                        {formatCents(invoice.amountDue)} due
+                      </p>
+                      {invoice.hostedInvoiceUrl ? (
+                        <a
+                          className="mt-2 inline-block text-sm font-medium text-black underline"
+                          href={invoice.hostedInvoiceUrl}
+                          rel="noreferrer noopener"
+                          target="_blank"
+                        >
+                          Open hosted invoice
+                        </a>
+                      ) : null}
+                    </div>
+                    <Badge className={invoiceTone(invoice.status)}>
+                      {invoice.status}
+                    </Badge>
                   </div>
-                  <Badge className={invoiceTone(invoice.status)}>
-                    {invoice.status}
-                  </Badge>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </article>
 
-        <article className="rounded-[2rem] border border-black/8 bg-white p-6 shadow-[0_16px_50px_rgba(0,0,0,0.05)]">
-          <h3 className="text-2xl font-semibold tracking-[-0.05em] text-black">
+        <article className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          <h3 className="text-xl font-bold tracking-[-0.03em] text-black">
             Active subscriptions
           </h3>
-          <div className="mt-5 space-y-3">
-            {subscriptions.map((subscription) => (
-              <div
-                className="rounded-[1.5rem] border border-black/8 bg-[#f6f4ef] p-4"
-                key={subscription.id}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-medium text-black">
-                      {subscription.customer?.user?.name ?? "Unknown customer"}
-                    </p>
-                    <p className="text-sm text-black/58">
-                      {formatCents(subscription.priceCents)} every{" "}
-                      {subscription.intervalCount} {subscription.interval}
-                    </p>
+          {subscriptions.length === 0 ? (
+            <div className="mt-5 rounded-2xl border border-dashed border-black/8 bg-[#f9f8f5] p-8 text-center">
+              <p className="text-sm text-black/45">
+                No subscriptions created yet.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-5 space-y-3">
+              {subscriptions.map((subscription) => (
+                <div
+                  className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4"
+                  key={subscription.id}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-medium text-black">
+                        {subscription.customer?.user?.name ??
+                          "Unknown customer"}
+                      </p>
+                      <p className="text-sm text-black/50">
+                        {formatCents(subscription.priceCents)} every{" "}
+                        {subscription.intervalCount} {subscription.interval}
+                      </p>
+                    </div>
+                    <Badge className={invoiceTone(subscription.status)}>
+                      {subscription.status}
+                    </Badge>
                   </div>
-                  <Badge className={invoiceTone(subscription.status)}>
-                    {subscription.status}
-                  </Badge>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </article>
       </section>
     </div>
