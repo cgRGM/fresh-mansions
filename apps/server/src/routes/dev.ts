@@ -1,13 +1,38 @@
 import { db } from "@fresh-mansions/db";
 import { customer, property, quote } from "@fresh-mansions/db/schema/domain";
+import * as Sentry from "@sentry/cloudflare";
 import { eq } from "drizzle-orm";
 
 import { createApp, requireSession } from "../lib/hono";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireRole } from "../middleware/auth";
 
 const app = createApp();
 
 app.use("*", requireAuth);
+
+app.get("/debug-sentry", requireRole("super_user"), async (c) => {
+  const session = requireSession(c);
+
+  await Sentry.startSpan(
+    {
+      name: "GET /api/dev/debug-sentry",
+      op: "http.server",
+    },
+    () => {
+      Sentry.logger.info("Triggered server Sentry verification", {
+        route: "/api/dev/debug-sentry",
+        userEmail: session.user.email,
+        userId: session.user.id,
+      });
+
+      throw new Error(
+        `Server Sentry verification error for ${session.user.email}`
+      );
+    }
+  );
+
+  return c.json({ ok: true });
+});
 
 app.post("/seed", async (c) => {
   const session = requireSession(c);

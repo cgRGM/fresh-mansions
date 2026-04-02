@@ -1,23 +1,80 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { env } from "@fresh-mansions/env/web";
+import * as Sentry from "@sentry/tanstackstart-react";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { LogOut, Mail, Sprout, User } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
 
-export const Route = createFileRoute("/app/profile")({
-  component: ProfilePage,
-});
+const appRouteApi = getRouteApi("/app");
 
-function ProfilePage() {
+const ProfilePage = () => {
   const { data: session } = authClient.useSession();
+  const routeContext = appRouteApi.useRouteContext();
+  const [sentryMessage, setSentryMessage] = useState<null | string>(null);
 
   const userName = session?.user?.name ?? "User";
   const userEmail = session?.user?.email ?? "";
+  const isSuperUser = routeContext.user.appUser.role === "super_user";
 
   const handleSignOut = useCallback(async () => {
     await authClient.signOut();
     window.location.href = "/login";
   }, []);
+
+  const handleBrowserSentryTest = useCallback(() => {
+    const error = new Error(
+      `Browser Sentry verification error for ${userEmail}`
+    );
+
+    Sentry.logger.info("Triggered browser Sentry verification", {
+      route: "/app/profile",
+      userEmail,
+    });
+    Sentry.captureException(error);
+    setSentryMessage("Browser test event sent to Sentry.");
+  }, [userEmail]);
+
+  const handleServerSentryTest = useCallback(async () => {
+    setSentryMessage("Sending server test event...");
+
+    try {
+      await Sentry.startSpan(
+        {
+          name: "Sentry server verification request",
+          op: "test",
+        },
+        async () => {
+          const response = await fetch(
+            `${env.VITE_SERVER_URL}/api/dev/debug-sentry`,
+            {
+              credentials: "include",
+            }
+          );
+
+          if (response.status !== 500) {
+            throw new Error(
+              `Expected 500 from server Sentry test, received ${response.status}`
+            );
+          }
+        }
+      );
+
+      setSentryMessage("Server test event sent to Sentry.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Server test failed";
+      setSentryMessage(`Server test failed: ${message}`);
+    }
+  }, []);
+
+  let sentryMessageClassName = "text-emerald-700";
+
+  if (sentryMessage?.startsWith("Sending")) {
+    sentryMessageClassName = "text-amber-700";
+  } else if (sentryMessage?.startsWith("Server test failed")) {
+    sentryMessageClassName = "text-red-600";
+  }
 
   return (
     <div className="min-h-full bg-[#f4f2ec] px-4 py-6 sm:px-6 lg:px-8">
@@ -79,6 +136,43 @@ function ProfilePage() {
             </div>
 
             <div className="mt-6 border-t border-black/6 pt-6">
+              {isSuperUser ? (
+                <div className="mb-6 rounded-2xl border border-black/6 bg-[#f9f8f5] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+                    Sentry verification
+                  </p>
+                  <h3 className="mt-2 text-base font-semibold tracking-[-0.03em] text-black">
+                    Test browser and server events
+                  </h3>
+                  <p className="mt-1 text-sm leading-relaxed text-black/45">
+                    These buttons are only shown to super users. Use them to
+                    confirm both Sentry projects are receiving events from the
+                    live app.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      className="rounded-xl bg-[#0a1a10] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#132b1a]"
+                      onClick={handleBrowserSentryTest}
+                      type="button"
+                    >
+                      Send browser event
+                    </button>
+                    <button
+                      className="rounded-xl border border-black/10 bg-white px-4 py-2.5 text-sm font-medium text-black transition-colors hover:bg-black/5"
+                      onClick={handleServerSentryTest}
+                      type="button"
+                    >
+                      Send server event
+                    </button>
+                  </div>
+                  {sentryMessage ? (
+                    <p className={`mt-3 text-sm ${sentryMessageClassName}`}>
+                      {sentryMessage}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
               <button
                 className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
                 onClick={handleSignOut}
@@ -93,4 +187,8 @@ function ProfilePage() {
       </div>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/app/profile")({
+  component: ProfilePage,
+});
