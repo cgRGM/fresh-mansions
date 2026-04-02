@@ -448,14 +448,52 @@ app.post("/contractors/:id/onboarding-link", async (c) => {
   const contractorId = c.req.param("id");
   const contractorRecord = await db.query.contractor.findFirst({
     where: eq(contractor.id, contractorId),
+    with: {
+      user: true,
+    },
   });
 
   if (!contractorRecord) {
     return c.json({ error: "Contractor not found" }, 404);
   }
 
-  if (!contractorRecord.stripeAccountId) {
-    return c.json({ error: "Contractor is missing a Stripe account" }, 400);
+  const {
+    contactEmail,
+    stripeAccountId: currentStripeAccountId,
+    user: contractorUser,
+  } = contractorRecord;
+  let stripeAccountId = currentStripeAccountId;
+
+  if (!stripeAccountId) {
+    const stripeEmail = contractorUser?.email ?? contactEmail ?? null;
+
+    if (!stripeEmail) {
+      return c.json(
+        { error: "Contractor is missing an email for Stripe onboarding" },
+        400
+      );
+    }
+
+    const stripeAccount = await createStripeConnectedAccount({
+      email: stripeEmail,
+    });
+
+    if (!stripeAccount?.accountId) {
+      return c.json(
+        { error: "Stripe is not configured yet for contractor onboarding" },
+        400
+      );
+    }
+
+    stripeAccountId = stripeAccount.accountId;
+
+    await db
+      .update(contractor)
+      .set({
+        stripeAccountId,
+        stripeAccountStatus: "pending",
+      })
+      .where(eq(contractor.id, contractorId));
   }
 
   const appBaseUrl = env.CORS_ORIGIN.replace(/\/$/, "");
@@ -463,7 +501,7 @@ app.post("/contractors/:id/onboarding-link", async (c) => {
 
   try {
     onboardingLink = await createStripeAccountLink({
-      accountId: contractorRecord.stripeAccountId,
+      accountId: stripeAccountId,
       refreshUrl: `${appBaseUrl}/admin/contractors`,
       returnUrl: `${appBaseUrl}/contractor`,
     });
