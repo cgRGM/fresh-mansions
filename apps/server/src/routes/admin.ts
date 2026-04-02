@@ -35,6 +35,7 @@ import {
   createStripeInvoice,
   createStripeSubscription,
   ensureStripeCustomer,
+  StripeRequestError,
 } from "../lib/stripe";
 import { requireAuth, requireRole } from "../middleware/auth";
 
@@ -457,12 +458,29 @@ app.post("/contractors/:id/onboarding-link", async (c) => {
     return c.json({ error: "Contractor is missing a Stripe account" }, 400);
   }
 
-  const baseUrl = env.BETTER_AUTH_URL.replace(/\/$/, "");
-  const onboardingLink = await createStripeAccountLink({
-    accountId: contractorRecord.stripeAccountId,
-    refreshUrl: `${baseUrl}/admin/contractors`,
-    returnUrl: `${baseUrl}/contractor`,
-  });
+  const appBaseUrl = env.CORS_ORIGIN.replace(/\/$/, "");
+  let onboardingLink: null | { url: string } = null;
+
+  try {
+    onboardingLink = await createStripeAccountLink({
+      accountId: contractorRecord.stripeAccountId,
+      refreshUrl: `${appBaseUrl}/admin/contractors`,
+      returnUrl: `${appBaseUrl}/contractor`,
+    });
+  } catch (error) {
+    if (error instanceof StripeRequestError) {
+      return c.json(
+        {
+          error: error.message,
+          stripeCode: error.code ?? null,
+          stripeType: error.type ?? null,
+        },
+        400
+      );
+    }
+
+    throw error;
+  }
 
   if (!onboardingLink?.url) {
     return c.json({ onboardingUrl: null, status: "pending" }, 200);

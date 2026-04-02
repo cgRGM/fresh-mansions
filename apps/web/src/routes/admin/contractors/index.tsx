@@ -10,20 +10,15 @@ import {
   TableHeader,
   TableRow,
 } from "@fresh-mansions/ui/components/table";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { HardHat } from "lucide-react";
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent, FormEvent, MouseEvent } from "react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/empty-state";
 import { listContractors } from "@/functions/admin/list-contractors";
 import { apiClient } from "@/lib/api-client";
-
-export const Route = createFileRoute("/admin/contractors/")({
-  component: AdminContractorsPage,
-  loader: () => listContractors(),
-});
 
 const statusTone = (value: string) => {
   switch (value) {
@@ -39,8 +34,10 @@ const statusTone = (value: string) => {
   }
 };
 
-function AdminContractorsPage() {
-  const contractors = Route.useLoaderData();
+const routeApi = getRouteApi("/admin/contractors/");
+
+const AdminContractorsPage = () => {
+  const contractors = routeApi.useLoaderData();
   const [isCreating, setIsCreating] = useState(false);
   const [onboardingLinks, setOnboardingLinks] = useState<
     Record<string, string>
@@ -99,7 +96,11 @@ function AdminContractorsPage() {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to create onboarding link");
+          const payload = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+
+          throw new Error(payload?.error ?? "Failed to create onboarding link");
         }
 
         const payload = (await response.json()) as {
@@ -125,6 +126,13 @@ function AdminContractorsPage() {
       }
     },
     []
+  );
+
+  const handleGenerateOnboardingClick = useCallback(
+    async (event: MouseEvent<HTMLButtonElement>) => {
+      await handleGenerateOnboardingLink(event.currentTarget.value);
+    },
+    [handleGenerateOnboardingLink]
   );
 
   return (
@@ -246,10 +254,9 @@ function AdminContractorsPage() {
                   <TableCell className="space-y-2">
                     <Button
                       className="h-9 rounded-full bg-black px-4 text-white hover:bg-black/90"
-                      onClick={() =>
-                        handleGenerateOnboardingLink(contractor.id)
-                      }
+                      onClick={handleGenerateOnboardingClick}
                       type="button"
+                      value={contractor.id}
                     >
                       Generate onboarding link
                     </Button>
@@ -272,4 +279,9 @@ function AdminContractorsPage() {
       )}
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/admin/contractors/")({
+  component: AdminContractorsPage,
+  loader: () => listContractors(),
+});

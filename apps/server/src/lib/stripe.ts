@@ -4,6 +4,25 @@ import { env } from "@fresh-mansions/env/server";
 
 type StripeRecord = Record<string, string | number | undefined>;
 
+class StripeRequestError extends Error {
+  code?: string;
+  status: number;
+  type?: string;
+
+  constructor(input: {
+    code?: string;
+    message: string;
+    status: number;
+    type?: string;
+  }) {
+    super(input.message);
+    this.name = "StripeRequestError";
+    this.code = input.code;
+    this.status = input.status;
+    this.type = input.type;
+  }
+}
+
 const buildFormBody = (payload: StripeRecord): URLSearchParams => {
   const body = new URLSearchParams();
 
@@ -36,7 +55,32 @@ const stripeRequest = async <T>(
   });
 
   if (!response.ok) {
-    throw new Error(`Stripe request failed for ${path}`);
+    let errorMessage = `Stripe request failed for ${path}`;
+    let errorCode: string | undefined;
+    let errorType: string | undefined;
+
+    try {
+      const responseBody = (await response.json()) as {
+        error?: {
+          code?: string;
+          message?: string;
+          type?: string;
+        };
+      };
+
+      errorMessage = responseBody.error?.message ?? errorMessage;
+      errorCode = responseBody.error?.code;
+      errorType = responseBody.error?.type;
+    } catch {
+      // Fall back to the generic message when Stripe doesn't return JSON.
+    }
+
+    throw new StripeRequestError({
+      code: errorCode,
+      message: errorMessage,
+      status: response.status,
+      type: errorType,
+    });
   }
 
   return (await response.json()) as T;
@@ -212,3 +256,5 @@ export const verifyStripeWebhookSignature = (
     Buffer.from(computedSignature)
   );
 };
+
+export { StripeRequestError };
