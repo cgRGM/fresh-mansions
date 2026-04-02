@@ -11,6 +11,7 @@
     "@fresh-mansions/auth": "workspace:*",
     "@fresh-mansions/db": "workspace:*",
     "@fresh-mansions/env": "workspace:*",
+    "@sentry/cloudflare": "^10.47.0",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "drizzle-orm": "^0.45.1",
