@@ -15,6 +15,15 @@ export const listRoutes = createServerFn({ method: "GET" })
         stops: {
           orderBy: (stops, { asc }) => [asc(stops.sequence)],
           with: {
+            property: {
+              with: {
+                customer: {
+                  with: {
+                    user: true,
+                  },
+                },
+              },
+            },
             workOrder: {
               with: {
                 contractor: true,

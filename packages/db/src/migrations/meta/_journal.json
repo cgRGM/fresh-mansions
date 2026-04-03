@@ -36,6 +36,13 @@
       "when": 1773901021700,
       "tag": "0004_tense_boomerang",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1775343600000,
+      "tag": "0005_add_service_table_and_route_stop_property",
+      "breakpoints": true
     }
   ]
 }

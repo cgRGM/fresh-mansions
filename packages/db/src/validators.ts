@@ -158,7 +158,7 @@ const quoteIntakeBaseSchema = dateWindowSchema
     phone: zod.string().optional(),
     preferredVisitTime: preferredVisitTimeSchema,
     propertySize: propertySizeEnum.optional(),
-    serviceType: serviceTypeEnum,
+    serviceType: zod.string().min(1, "Service type is required"),
   })
   .refine(({ endDate }) => Boolean(endDate), {
     message: "End date is required",
