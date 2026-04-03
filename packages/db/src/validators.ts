@@ -168,7 +168,7 @@ export const quoteIntakeSchema = dateWindowSchema
     propertySize: propertySizeEnum.optional(),
     radarMetadata: zod.record(zod.string(), zod.unknown()).optional(),
     radarPlaceId: zod.string().optional(),
-    serviceType: serviceTypeEnum,
+    serviceType: zod.string().min(1, "Service type is required"),
     state: zod.string().min(2, "State is required"),
     street: zod.string().min(1, "Street address is required"),
     validationStatus: zod.literal("validated"),

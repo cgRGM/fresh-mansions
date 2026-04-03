@@ -206,20 +206,40 @@ export const routeStop = sqliteTable(
       .notNull(),
     id: text("id").primaryKey(),
     notes: text("notes"),
+    propertyId: text("property_id").references(() => property.id, {
+      onDelete: "set null",
+    }),
     routeId: text("route_id")
       .notNull()
       .references(() => route.id, { onDelete: "cascade" }),
     sequence: integer("sequence").notNull(),
     status: text("status").notNull().default("pending"),
-    workOrderId: text("work_order_id")
-      .notNull()
-      .references(() => workOrder.id, { onDelete: "cascade" }),
+    workOrderId: text("work_order_id").references(() => workOrder.id, {
+      onDelete: "cascade",
+    }),
   },
   (table) => [
     index("routeStop_routeId_idx").on(table.routeId),
     index("routeStop_workOrderId_idx").on(table.workOrderId),
+    index("routeStop_propertyId_idx").on(table.propertyId),
   ]
 );
+
+export const service = sqliteTable("service", {
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .notNull(),
+  description: text("description"),
+  id: text("id").primaryKey(),
+  isActive: integer("is_active", { mode: "boolean" }).default(true).notNull(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
 
 export const invoice = sqliteTable(
   "invoice",
@@ -369,6 +389,10 @@ export const routeRelations = relations(route, ({ one, many }) => ({
 }));
 
 export const routeStopRelations = relations(routeStop, ({ one }) => ({
+  property: one(property, {
+    fields: [routeStop.propertyId],
+    references: [property.id],
+  }),
   route: one(route, {
     fields: [routeStop.routeId],
     references: [route.id],

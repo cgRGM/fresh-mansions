@@ -18,6 +18,7 @@ import { AddressAutocomplete } from "@/components/quote/address-autocomplete";
 import type { QuoteAddressSelection } from "@/components/quote/address-autocomplete";
 import { useQuoteFlow } from "@/components/quote/quote-flow-context";
 import { QuoteStepLayout } from "@/components/quote/quote-step-layout";
+import { listActiveServices } from "@/functions/list-active-services";
 import { saveQuoteDraft } from "@/lib/quote-draft";
 
 const onboardingSearchSchema = zod.object({
@@ -35,29 +36,6 @@ const onboardingSchema = zod.object({
   serviceType: zod.string().min(1, "Choose a service type"),
 });
 
-const serviceTypeOptions = [
-  {
-    description: "Weekly or bi-weekly lawn maintenance",
-    label: "Mowing",
-    value: "mowing",
-  },
-  {
-    description: "Beds, borders, and larger outdoor projects",
-    label: "Landscaping",
-    value: "landscaping",
-  },
-  {
-    description: "Leaves, debris, and overgrowth removal",
-    label: "Cleanup",
-    value: "cleanup",
-  },
-  {
-    description: "Feeding plans and turf health support",
-    label: "Fertilization",
-    value: "fertilization",
-  },
-] as const;
-
 const propertySizeOptions = [
   { label: "Not sure yet", value: "" },
   { label: "Small", value: "small" },
@@ -70,6 +48,7 @@ const onboardingRouteApi = getRouteApi("/get-quote/onboarding");
 const OnboardingStep = () => {
   const navigate = useNavigate();
   const search = onboardingRouteApi.useSearch();
+  const { services } = onboardingRouteApi.useLoaderData();
   const { setFiles } = useQuoteFlow();
   const [files, setLocalFiles] = useState<File[]>([]);
   const [selectedAddress, setSelectedAddress] =
@@ -183,11 +162,7 @@ const OnboardingStep = () => {
             : undefined,
           radarMetadata: selectedAddress.radarMetadata,
           radarPlaceId: selectedAddress.radarPlaceId,
-          serviceType: parsed.data.serviceType as
-            | "cleanup"
-            | "fertilization"
-            | "landscaping"
-            | "mowing",
+          serviceType: parsed.data.serviceType,
           startDate: search.startDate,
           state: selectedAddress.state,
           street: selectedAddress.street,
@@ -248,9 +223,10 @@ const OnboardingStep = () => {
                 value={formValues.serviceType}
               >
                 <option value="">Select a service</option>
-                {serviceTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label} - {option.description}
+                {services.map((svc) => (
+                  <option key={svc.id} value={svc.slug}>
+                    {svc.name}
+                    {svc.description ? ` - ${svc.description}` : ""}
                   </option>
                 ))}
               </select>
@@ -377,5 +353,8 @@ const OnboardingStep = () => {
 
 export const Route = createFileRoute("/get-quote/onboarding")({
   component: OnboardingStep,
+  loader: async () => ({
+    services: await listActiveServices(),
+  }),
   validateSearch: onboardingSearchSchema,
 });

@@ -11,6 +11,7 @@ import {
   Home,
   LayoutDashboard,
   Menu,
+  Settings,
   Sprout,
   Users,
   Wrench,
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/admin/routes", icon: LayoutDashboard, label: "Routes" },
   { href: "/admin/billing", icon: FileText, label: "Billing" },
   { href: "/admin/contractors", icon: HardHat, label: "Contractors" },
+  { href: "/admin/services", icon: Settings, label: "Services" },
 ];
 
 const adminRouteApi = getRouteApi("/admin");

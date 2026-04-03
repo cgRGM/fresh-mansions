@@ -1,8 +1,10 @@
 import { Badge } from "@fresh-mansions/ui/components/badge";
 import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router";
-import { Calendar, ChevronRight, MapPin } from "lucide-react";
+import { Calendar, ChevronRight, Map, MapPin } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/empty-state";
+import { RadarStaticMap } from "@/components/radar-static-map";
 import { getContractorRoutes } from "@/functions/contractor/get-contractor-routes";
 import { getPropertyDisplayAddress } from "@/lib/address";
 
@@ -15,12 +17,52 @@ const routeStatusColors: Record<string, string> = {
   ready: "bg-amber-100 text-amber-700",
 };
 
+const ROUTE_COLORS = [
+  "0x0a1a10",
+  "0x2563eb",
+  "0xdc2626",
+  "0xd97706",
+  "0x7c3aed",
+  "0x0891b2",
+  "0xdb2777",
+  "0x059669",
+];
+
 const ContractorRoutes = () => {
   const { routes } = routeApi.useLoaderData();
+  const [selectedRouteFilter, setSelectedRouteFilter] = useState<string>("all");
 
   const today = new Date().toISOString().slice(0, 10);
   const upcomingRoutes = routes.filter((r) => r.routeDate >= today);
   const pastRoutes = routes.filter((r) => r.routeDate < today);
+
+  // Build map markers from all route stops
+  const mapMarkers = useMemo(() => {
+    const markers: { color: string; latitude: number; longitude: number }[] =
+      [];
+
+    for (const [routeIndex, r] of routes.entries()) {
+      if (selectedRouteFilter !== "all" && r.id !== selectedRouteFilter) {
+        continue;
+      }
+
+      const color = ROUTE_COLORS[routeIndex % ROUTE_COLORS.length];
+
+      for (const stop of r.stops) {
+        const prop = stop.property ?? stop.workOrder?.quote?.property ?? null;
+
+        if (prop?.latitude && prop?.longitude) {
+          markers.push({
+            color,
+            latitude: Number(prop.latitude),
+            longitude: Number(prop.longitude),
+          });
+        }
+      }
+    }
+
+    return markers;
+  }, [routes, selectedRouteFilter]);
 
   return (
     <div className="min-h-full bg-[#f4f2ec] px-4 py-6 sm:px-6 lg:px-8">
@@ -37,6 +79,65 @@ const ContractorRoutes = () => {
             its stops.
           </p>
         </div>
+
+        {/* Route map */}
+        {mapMarkers.length > 0 ? (
+          <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50">
+                  <Map className="h-4 w-4 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+                    Overview
+                  </p>
+                  <h3 className="text-lg font-bold tracking-[-0.03em] text-black">
+                    Route map
+                  </h3>
+                </div>
+              </div>
+              {routes.length > 1 ? (
+                <select
+                  className="h-9 rounded-xl border border-black/10 bg-white px-3 text-sm"
+                  onChange={(e) => setSelectedRouteFilter(e.target.value)}
+                  value={selectedRouteFilter}
+                >
+                  <option value="all">All routes</option>
+                  {routes.map((r, i) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} ({r.routeDate})
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+            </div>
+
+            {/* Color legend */}
+            {selectedRouteFilter === "all" && routes.length > 1 ? (
+              <div className="mb-4 flex flex-wrap gap-3">
+                {routes.map((r, i) => (
+                  <div className="flex items-center gap-1.5" key={r.id}>
+                    <div
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{
+                        backgroundColor: `#${(ROUTE_COLORS[i % ROUTE_COLORS.length] ?? "0a1a10").replace("0x", "")}`,
+                      }}
+                    />
+                    <span className="text-xs text-black/50">{r.name}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <RadarStaticMap
+              className="h-[280px] sm:h-[360px]"
+              height={360}
+              markers={mapMarkers}
+              width={800}
+            />
+          </section>
+        ) : null}
 
         {routes.length === 0 ? (
           <EmptyState
@@ -112,6 +213,26 @@ const RouteCard = ({
   const completedStops = r.stops.filter((s) => s.status === "completed").length;
   const totalStops = r.stops.length;
 
+  // Build mini-map markers for this specific route
+  const routeMarkers = useMemo(() => {
+    const markers: { color: string; latitude: number; longitude: number }[] =
+      [];
+
+    for (const stop of r.stops) {
+      const prop = stop.property ?? stop.workOrder?.quote?.property ?? null;
+
+      if (prop?.latitude && prop?.longitude) {
+        markers.push({
+          color: "0x0a1a10",
+          latitude: Number(prop.latitude),
+          longitude: Number(prop.longitude),
+        });
+      }
+    }
+
+    return markers;
+  }, [r.stops]);
+
   return (
     <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 transition-all hover:border-black/12 hover:shadow-sm">
       <div className="flex items-start justify-between gap-3">
@@ -138,38 +259,67 @@ const RouteCard = ({
         </Badge>
       </div>
 
+      {/* Mini map for this route */}
+      {routeMarkers.length > 0 ? (
+        <div className="mt-3 border-t border-black/5 pt-3">
+          <RadarStaticMap
+            className="h-[140px]"
+            height={140}
+            markers={routeMarkers}
+            width={600}
+          />
+        </div>
+      ) : null}
+
       {/* Stops preview */}
       {r.stops.length > 0 ? (
         <div className="mt-3 space-y-1.5 border-t border-black/5 pt-3">
-          {r.stops.map((stop) => (
-            <Link
-              className="group flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors hover:bg-black/4"
-              key={stop.id}
-              params={{ stopId: stop.id }}
-              to="/contractor/stops/$stopId"
-            >
-              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-black/5 text-[10px] font-bold text-black/40">
-                {stop.sequence + 1}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-black/70">
-                  {stop.workOrder?.quote?.customer?.user?.name ?? "Unknown"}
-                </p>
-                <div className="flex items-center gap-1 text-[11px] text-black/35">
-                  <MapPin className="h-2.5 w-2.5" />
-                  <span className="truncate">
-                    {getPropertyDisplayAddress(stop.workOrder?.quote?.property)}
-                  </span>
-                </div>
-              </div>
-              <Badge
-                className={`text-[10px] ${stop.status === "completed" ? "bg-emerald-100 text-emerald-700" : "bg-black/8 text-black/60"}`}
+          {r.stops.map((stop) => {
+            const prop =
+              stop.property ?? stop.workOrder?.quote?.property ?? null;
+            const customerName =
+              stop.property?.customer?.user?.name ??
+              stop.workOrder?.quote?.customer?.user?.name ??
+              "Unknown";
+            const isDirect = !stop.workOrderId;
+
+            return (
+              <Link
+                className="group flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors hover:bg-black/4"
+                key={stop.id}
+                params={{ stopId: stop.id }}
+                to="/contractor/stops/$stopId"
               >
-                {stop.status}
-              </Badge>
-              <ChevronRight className="h-3.5 w-3.5 text-black/20 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          ))}
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-black/5 text-[10px] font-bold text-black/40">
+                  {stop.sequence + 1}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-sm font-medium text-black/70">
+                      {customerName}
+                    </p>
+                    {isDirect ? (
+                      <Badge className="bg-violet-100 text-violet-700 text-[9px] px-1.5 py-0">
+                        Direct
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-1 text-[11px] text-black/35">
+                    <MapPin className="h-2.5 w-2.5" />
+                    <span className="truncate">
+                      {getPropertyDisplayAddress(prop)}
+                    </span>
+                  </div>
+                </div>
+                <Badge
+                  className={`text-[10px] ${stop.status === "completed" ? "bg-emerald-100 text-emerald-700" : "bg-black/8 text-black/60"}`}
+                >
+                  {stop.status}
+                </Badge>
+                <ChevronRight className="h-3.5 w-3.5 text-black/20 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            );
+          })}
         </div>
       ) : null}
     </div>
