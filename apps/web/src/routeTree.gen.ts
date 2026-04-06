@@ -33,6 +33,7 @@ import { Route as AppDashboardRouteImport } from './routes/app/dashboard'
 import { Route as AppQuotesIndexRouteImport } from './routes/app/quotes/index'
 import { Route as AppPropertiesIndexRouteImport } from './routes/app/properties/index'
 import { Route as AdminWorkOrdersIndexRouteImport } from './routes/admin/work-orders/index'
+import { Route as AdminServicesIndexRouteImport } from './routes/admin/services/index'
 import { Route as AdminRoutesIndexRouteImport } from './routes/admin/routes/index'
 import { Route as AdminQuotesIndexRouteImport } from './routes/admin/quotes/index'
 import { Route as AdminPropertiesIndexRouteImport } from './routes/admin/properties/index'
@@ -164,6 +165,11 @@ const AdminWorkOrdersIndexRoute = AdminWorkOrdersIndexRouteImport.update({
   path: '/work-orders/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminServicesIndexRoute = AdminServicesIndexRouteImport.update({
+  id: '/services/',
+  path: '/services/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminRoutesIndexRoute = AdminRoutesIndexRouteImport.update({
   id: '/routes/',
   path: '/routes/',
@@ -247,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/admin/properties/': typeof AdminPropertiesIndexRoute
   '/admin/quotes/': typeof AdminQuotesIndexRoute
   '/admin/routes/': typeof AdminRoutesIndexRoute
+  '/admin/services/': typeof AdminServicesIndexRoute
   '/admin/work-orders/': typeof AdminWorkOrdersIndexRoute
   '/app/properties/': typeof AppPropertiesIndexRoute
   '/app/quotes/': typeof AppQuotesIndexRoute
@@ -279,6 +286,7 @@ export interface FileRoutesByTo {
   '/admin/properties': typeof AdminPropertiesIndexRoute
   '/admin/quotes': typeof AdminQuotesIndexRoute
   '/admin/routes': typeof AdminRoutesIndexRoute
+  '/admin/services': typeof AdminServicesIndexRoute
   '/admin/work-orders': typeof AdminWorkOrdersIndexRoute
   '/app/properties': typeof AppPropertiesIndexRoute
   '/app/quotes': typeof AppQuotesIndexRoute
@@ -316,6 +324,7 @@ export interface FileRoutesById {
   '/admin/properties/': typeof AdminPropertiesIndexRoute
   '/admin/quotes/': typeof AdminQuotesIndexRoute
   '/admin/routes/': typeof AdminRoutesIndexRoute
+  '/admin/services/': typeof AdminServicesIndexRoute
   '/admin/work-orders/': typeof AdminWorkOrdersIndexRoute
   '/app/properties/': typeof AppPropertiesIndexRoute
   '/app/quotes/': typeof AppQuotesIndexRoute
@@ -354,6 +363,7 @@ export interface FileRouteTypes {
     | '/admin/properties/'
     | '/admin/quotes/'
     | '/admin/routes/'
+    | '/admin/services/'
     | '/admin/work-orders/'
     | '/app/properties/'
     | '/app/quotes/'
@@ -386,6 +396,7 @@ export interface FileRouteTypes {
     | '/admin/properties'
     | '/admin/quotes'
     | '/admin/routes'
+    | '/admin/services'
     | '/admin/work-orders'
     | '/app/properties'
     | '/app/quotes'
@@ -422,6 +433,7 @@ export interface FileRouteTypes {
     | '/admin/properties/'
     | '/admin/quotes/'
     | '/admin/routes/'
+    | '/admin/services/'
     | '/admin/work-orders/'
     | '/app/properties/'
     | '/app/quotes/'
@@ -606,6 +618,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkOrdersIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/services/': {
+      id: '/admin/services/'
+      path: '/services'
+      fullPath: '/admin/services/'
+      preLoaderRoute: typeof AdminServicesIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/routes/': {
       id: '/admin/routes/'
       path: '/routes'
@@ -688,6 +707,7 @@ interface AdminRouteRouteChildren {
   AdminPropertiesIndexRoute: typeof AdminPropertiesIndexRoute
   AdminQuotesIndexRoute: typeof AdminQuotesIndexRoute
   AdminRoutesIndexRoute: typeof AdminRoutesIndexRoute
+  AdminServicesIndexRoute: typeof AdminServicesIndexRoute
   AdminWorkOrdersIndexRoute: typeof AdminWorkOrdersIndexRoute
 }
 
@@ -700,6 +720,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminPropertiesIndexRoute: AdminPropertiesIndexRoute,
   AdminQuotesIndexRoute: AdminQuotesIndexRoute,
   AdminRoutesIndexRoute: AdminRoutesIndexRoute,
+  AdminServicesIndexRoute: AdminServicesIndexRoute,
   AdminWorkOrdersIndexRoute: AdminWorkOrdersIndexRoute,
 }
 

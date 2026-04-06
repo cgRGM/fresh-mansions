@@ -59,14 +59,18 @@ export const getTodaysRoute = createServerFn({ method: "GET" })
             ...routeRecord,
             stops: routeRecord.stops.map((stop) => ({
               ...stop,
-              workOrder: withQuotePropertyFullAddress(stop.workOrder),
+              workOrder: stop.workOrder
+                ? withQuotePropertyFullAddress(stop.workOrder)
+                : null,
             })),
           }
         : null,
       stops:
         routeRecord?.stops.map((stop) => ({
           ...stop,
-          workOrder: withQuotePropertyFullAddress(stop.workOrder),
+          workOrder: stop.workOrder
+            ? withQuotePropertyFullAddress(stop.workOrder)
+            : null,
         })) ?? [],
     };
   });

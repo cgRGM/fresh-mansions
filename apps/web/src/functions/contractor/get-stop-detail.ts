@@ -44,6 +44,8 @@ export const getStopDetail = createServerFn({ method: "GET" })
 
     return {
       ...stop,
-      workOrder: withQuotePropertyFullAddress(stop.workOrder),
+      workOrder: stop.workOrder
+        ? withQuotePropertyFullAddress(stop.workOrder)
+        : null,
     };
   });

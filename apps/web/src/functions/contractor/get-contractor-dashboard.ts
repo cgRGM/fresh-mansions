@@ -89,7 +89,9 @@ export const getContractorDashboard = createServerFn({ method: "GET" })
       todayStops:
         todayRouteResult?.stops.map((stop) => ({
           ...stop,
-          workOrder: withQuotePropertyFullAddress(stop.workOrder),
+          workOrder: stop.workOrder
+            ? withQuotePropertyFullAddress(stop.workOrder)
+            : null,
         })) ?? [],
       workOrderStats: { assigned, completed, inProgress },
     };

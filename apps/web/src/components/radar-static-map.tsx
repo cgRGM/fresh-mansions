@@ -1,27 +1,54 @@
 import { env } from "@fresh-mansions/env/web";
 
-type StaticMapMarker = {
+interface StaticMapMarker {
   color?: string;
   latitude: number;
   longitude: number;
-};
+}
 
-type RadarStaticMapProps = {
+interface RadarStaticMapProps {
   readonly className?: string;
   readonly height?: number;
+  readonly mapStyle?: "radar-dark-v1" | "radar-default-v1" | "radar-light-v1";
   readonly markers: StaticMapMarker[];
-  readonly style?: "radar-dark-v1" | "radar-default-v1" | "radar-light-v1";
   readonly width?: number;
+}
+
+const RADAR_STATIC_MAP_MAX_DIMENSION = 2048;
+const RADAR_STATIC_MAP_MIN_DIMENSION = 100;
+const RADAR_STATIC_MAP_SCALE = 2;
+
+const normalizeMarkerColor = (value: string): string => {
+  if (value.startsWith("#")) {
+    return `0x${value.slice(1)}`;
+  }
+
+  if (value.startsWith("0x")) {
+    return value;
+  }
+
+  return `0x${value}`;
 };
 
 const RadarStaticMap = ({
   className = "",
   height = 400,
+  mapStyle = "radar-default-v1",
   markers,
-  style = "radar-default-v1",
   width = 800,
 }: RadarStaticMapProps) => {
   const radarKey = env.VITE_RADAR_PUBLISHABLE_KEY;
+  const maxRequestedDimension = Math.floor(
+    RADAR_STATIC_MAP_MAX_DIMENSION / RADAR_STATIC_MAP_SCALE
+  );
+  const safeHeight = Math.min(
+    Math.max(height, RADAR_STATIC_MAP_MIN_DIMENSION),
+    maxRequestedDimension
+  );
+  const safeWidth = Math.min(
+    Math.max(width, RADAR_STATIC_MAP_MIN_DIMENSION),
+    maxRequestedDimension
+  );
 
   if (!radarKey || markers.length === 0) {
     return (
@@ -30,7 +57,7 @@ const RadarStaticMap = ({
         style={{ height, width: "100%" }}
       >
         <p className="text-sm text-black/40">
-          {!radarKey ? "Map not configured" : "No locations to display"}
+          {radarKey ? "No locations to display" : "Map not configured"}
         </p>
       </div>
     );
@@ -38,26 +65,21 @@ const RadarStaticMap = ({
 
   const markerParams = markers
     .map((m) => {
-      const color = m.color ?? "0x0a1a10";
-      const hexColor = color.startsWith("#")
-        ? `0x${color.slice(1)}`
-        : color.startsWith("0x")
-          ? color
-          : `0x${color}`;
+      const hexColor = normalizeMarkerColor(m.color ?? "0x0a1a10");
       return `markers=color:${hexColor}|${String(m.latitude)},${String(m.longitude)}`;
     })
     .join("&");
 
-  const url = `https://api.radar.io/maps/static?${markerParams}&width=${String(width)}&height=${String(height)}&scale=2&style=${style}&publishableKey=${radarKey}`;
+  const url = `https://api.radar.io/maps/static?${markerParams}&width=${String(safeWidth)}&height=${String(safeHeight)}&scale=${String(RADAR_STATIC_MAP_SCALE)}&style=${mapStyle}&publishableKey=${radarKey}`;
 
   return (
     <img
       alt="Route map"
       className={`w-full rounded-2xl border border-black/8 object-cover ${className}`}
-      height={height}
+      height={safeHeight}
       loading="lazy"
       src={url}
-      width={width}
+      width={safeWidth}
     />
   );
 };

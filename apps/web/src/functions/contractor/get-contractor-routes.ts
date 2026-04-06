@@ -48,7 +48,9 @@ export const getContractorRoutes = createServerFn({ method: "GET" })
         ...r,
         stops: r.stops.map((stop) => ({
           ...stop,
-          workOrder: withQuotePropertyFullAddress(stop.workOrder),
+          workOrder: stop.workOrder
+            ? withQuotePropertyFullAddress(stop.workOrder)
+            : null,
         })),
       })),
     };

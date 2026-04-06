@@ -13,6 +13,7 @@ import {
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import { EmptyState } from "@/components/empty-state";
 import type { MapMarker } from "@/components/radar-route-map";
@@ -24,9 +25,11 @@ import { listContractors } from "@/functions/admin/list-contractors";
 import { listProperties } from "@/functions/admin/list-properties";
 import { listRoutes } from "@/functions/admin/list-routes";
 import { listWorkOrders } from "@/functions/admin/list-work-orders";
+import { reassignRoute } from "@/functions/admin/reassign-route";
 import { getPropertyDisplayAddress } from "@/lib/address";
 
 const adminRoutesRouteApi = getRouteApi("/admin/routes/");
+const browserDateInputSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 type RouteRecord = Awaited<ReturnType<typeof listRoutes>>[number];
 
@@ -40,6 +43,284 @@ const ROUTE_COLORS = [
   "0xdb2777",
   "0x059669",
 ];
+
+interface RouteCardProps {
+  readonly contractors: Awaited<ReturnType<typeof listContractors>>;
+  readonly expanded: boolean;
+  readonly onToggle: (routeId: string) => void;
+  readonly route: RouteRecord;
+  readonly routeColor: string;
+}
+
+const getStopStatusBadgeClass = (status: string): string => {
+  if (status === "completed") {
+    return "bg-emerald-100 text-emerald-700";
+  }
+
+  return "bg-black/8 text-black/60";
+};
+
+const StopDirectBadge = ({
+  isDirectProperty,
+}: {
+  readonly isDirectProperty: boolean;
+}) => {
+  if (!isDirectProperty) {
+    return null;
+  }
+
+  return <Badge className="bg-[#d6f18b] text-[#0a1a10]">Direct</Badge>;
+};
+
+const StopCoordinates = ({
+  latitude,
+  longitude,
+}: {
+  readonly latitude: null | number | undefined;
+  readonly longitude: null | number | undefined;
+}) => {
+  if (typeof latitude !== "number") {
+    return null;
+  }
+
+  if (typeof longitude !== "number") {
+    return null;
+  }
+
+  return (
+    <p className="mt-1 text-xs text-black/30">
+      {latitude.toFixed(4)}, {longitude.toFixed(4)}
+    </p>
+  );
+};
+
+const RouteStopItem = ({
+  stop,
+}: {
+  readonly stop: RouteRecord["stops"][number];
+}) => {
+  const prop = stop.property ?? stop.workOrder?.quote?.property ?? null;
+  const customerName =
+    stop.property?.customer?.user?.name ??
+    stop.workOrder?.quote?.customer?.user?.name ??
+    "Unknown client";
+  const isDirectProperty = Boolean(stop.propertyId && !stop.workOrderId);
+
+  return (
+    <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+              Stop {stop.sequence + 1}
+            </p>
+            <StopDirectBadge isDirectProperty={isDirectProperty} />
+          </div>
+          <p className="mt-2 font-medium text-black">{customerName}</p>
+          <p className="text-sm text-black/50">
+            {getPropertyDisplayAddress(prop)}
+          </p>
+          <StopCoordinates
+            latitude={prop?.latitude}
+            longitude={prop?.longitude}
+          />
+        </div>
+        <Badge className={getStopStatusBadgeClass(stop.status)}>
+          {stop.status}
+        </Badge>
+      </div>
+    </div>
+  );
+};
+
+const RouteCard = ({
+  contractors,
+  expanded,
+  onToggle,
+  route,
+  routeColor,
+}: RouteCardProps) => {
+  const [isSavingReassignment, setIsSavingReassignment] = useState(false);
+  const [reassignmentForm, setReassignmentForm] = useState({
+    contractorId: route.contractorId ?? "",
+    routeDate: route.routeDate,
+  });
+
+  const handleCardToggle = useCallback(() => {
+    onToggle(route.id);
+  }, [onToggle, route.id]);
+
+  const handleReassignmentChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const { name, value } = event.target;
+      setReassignmentForm((current) => ({
+        ...current,
+        [name]: value,
+      }));
+    },
+    []
+  );
+
+  const handleReassignmentSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+
+      if (
+        !browserDateInputSchema.safeParse(reassignmentForm.routeDate).success
+      ) {
+        toast.error("Choose a valid route date");
+        return;
+      }
+
+      setIsSavingReassignment(true);
+
+      try {
+        await reassignRoute({
+          data: {
+            contractorId: reassignmentForm.contractorId || undefined,
+            routeDate: reassignmentForm.routeDate,
+            routeId: route.id,
+          },
+        });
+        toast.success("Route assignment updated");
+        window.location.reload();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to update route assignment"
+        );
+      } finally {
+        setIsSavingReassignment(false);
+      }
+    },
+    [reassignmentForm.contractorId, reassignmentForm.routeDate, route.id]
+  );
+
+  const stopMarkers = route.stops.flatMap((stop) => {
+    const prop = stop.property ?? stop.workOrder?.quote?.property ?? null;
+    if (typeof prop?.latitude !== "number") {
+      return [];
+    }
+    if (typeof prop.longitude !== "number") {
+      return [];
+    }
+    return [
+      {
+        color: routeColor,
+        latitude: prop.latitude,
+        longitude: prop.longitude,
+      },
+    ];
+  });
+
+  return (
+    <article className="rounded-3xl border border-black/6 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+      <button
+        className="flex w-full items-start justify-between gap-4 p-6 text-left"
+        onClick={handleCardToggle}
+        type="button"
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className="mt-1 h-4 w-4 flex-shrink-0 rounded-full"
+            style={{
+              backgroundColor: `#${routeColor.slice(2)}`,
+            }}
+          />
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+              {route.routeDate}
+            </p>
+            <h3 className="mt-1 text-xl font-bold tracking-[-0.03em] text-black">
+              {route.name}
+            </h3>
+            <p className="mt-1 text-sm text-black/50">
+              {route.contractor?.displayName ?? "No contractor assigned yet"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge className="bg-black text-white">
+            {route.stops.length} stops
+          </Badge>
+          {expanded ? (
+            <ChevronUp className="h-4 w-4 text-black/30" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-black/30" />
+          )}
+        </div>
+      </button>
+
+      {expanded ? (
+        <div className="border-t border-black/6 p-6">
+          <form
+            className="mb-5 grid gap-3 rounded-2xl border border-black/8 bg-[#f9f8f5] p-4 md:grid-cols-[1fr_1fr_auto] md:items-end"
+            onSubmit={handleReassignmentSubmit}
+          >
+            <div className="space-y-1">
+              <Label htmlFor={`route-date-${route.id}`}>Route date</Label>
+              <Input
+                className="h-10 rounded-xl border-black/10 bg-white"
+                id={`route-date-${route.id}`}
+                name="routeDate"
+                onChange={handleReassignmentChange}
+                type="date"
+                value={reassignmentForm.routeDate}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor={`route-contractor-${route.id}`}>Contractor</Label>
+              <select
+                className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-sm"
+                id={`route-contractor-${route.id}`}
+                name="contractorId"
+                onChange={handleReassignmentChange}
+                value={reassignmentForm.contractorId}
+              >
+                <option value="">Unassigned</option>
+                {contractors.map((contractor) => (
+                  <option key={contractor.id} value={contractor.id}>
+                    {contractor.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button
+              className="h-10 rounded-full bg-black px-4 text-white hover:bg-black/90"
+              disabled={isSavingReassignment}
+              type="submit"
+            >
+              {isSavingReassignment ? "Saving..." : "Update route"}
+            </Button>
+          </form>
+
+          {stopMarkers.length > 0 ? (
+            <div className="mb-5">
+              <RadarStaticMap
+                className="h-[250px]"
+                height={250}
+                mapStyle="radar-light-v1"
+                markers={stopMarkers}
+                width={1000}
+              />
+            </div>
+          ) : null}
+
+          {route.stops.length > 0 ? (
+            <div className="space-y-3">
+              {route.stops.map((stop) => (
+                <RouteStopItem key={stop.id} stop={stop} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-black/40">No stops added yet.</p>
+          )}
+        </div>
+      ) : null}
+    </article>
+  );
+};
 
 const AdminRoutesPage = () => {
   const { contractors, properties, routes, workOrders } =
@@ -60,6 +341,13 @@ const AdminRoutesPage = () => {
   });
   const [expandedRouteId, setExpandedRouteId] = useState<null | string>(null);
   const [selectedRouteFilter, setSelectedRouteFilter] = useState<string>("all");
+
+  const handleSelectedRouteFilterChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      setSelectedRouteFilter(event.target.value);
+    },
+    []
+  );
 
   const assignableOrders = useMemo(
     () => workOrders.filter((order) => order.status !== "completed"),
@@ -149,11 +437,24 @@ const AdminRoutesPage = () => {
   const handleCreateRoute = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
+
+      const normalizedRouteName = routeForm.name.trim();
+
+      if (!normalizedRouteName) {
+        toast.error("Route name is required");
+        return;
+      }
+
+      if (!browserDateInputSchema.safeParse(routeForm.routeDate).success) {
+        toast.error("Choose a route date before creating the route");
+        return;
+      }
+
       try {
         await createRouteRecord({
           data: {
             contractorId: routeForm.contractorId || undefined,
-            name: routeForm.name,
+            name: normalizedRouteName,
             routeDate: routeForm.routeDate,
             status: "draft",
           },
@@ -213,6 +514,26 @@ const AdminRoutesPage = () => {
     [propertyForm]
   );
 
+  const handlePropertyRouteChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      setPropertyForm((current) => ({
+        ...current,
+        routeId: event.target.value,
+      }));
+    },
+    []
+  );
+
+  const handlePropertySelectionChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      setPropertyForm((current) => ({
+        ...current,
+        propertyId: event.target.value,
+      }));
+    },
+    []
+  );
+
   const toggleExpanded = useCallback((id: string) => {
     setExpandedRouteId((current) => (current === id ? null : id));
   }, []);
@@ -238,11 +559,11 @@ const AdminRoutesPage = () => {
             </div>
             <select
               className="h-10 rounded-2xl border border-black/10 bg-white px-3 text-sm"
-              onChange={(e) => setSelectedRouteFilter(e.target.value)}
+              onChange={handleSelectedRouteFilterChange}
               value={selectedRouteFilter}
             >
               <option value="all">All routes</option>
-              {routes.map((r, i) => (
+              {routes.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name} ({r.routeDate})
                 </option>
@@ -270,12 +591,12 @@ const AdminRoutesPage = () => {
           <RadarStaticMap
             className="h-[400px]"
             height={400}
+            mapStyle="radar-light-v1"
             markers={filteredMarkers.map((m) => ({
               color: m.color,
               latitude: m.latitude,
               longitude: m.longitude,
             }))}
-            style="radar-light-v1"
             width={1200}
           />
         </section>
@@ -377,9 +698,7 @@ const AdminRoutesPage = () => {
               <select
                 className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
                 id="prop-routeId"
-                onChange={(e) =>
-                  setPropertyForm((s) => ({ ...s, routeId: e.target.value }))
-                }
+                onChange={handlePropertyRouteChange}
                 value={propertyForm.routeId}
               >
                 <option value="">Choose route</option>
@@ -400,12 +719,7 @@ const AdminRoutesPage = () => {
               <select
                 className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
                 id="prop-propertyId"
-                onChange={(e) =>
-                  setPropertyForm((s) => ({
-                    ...s,
-                    propertyId: e.target.value,
-                  }))
-                }
+                onChange={handlePropertySelectionChange}
                 value={propertyForm.propertyId}
               >
                 <option value="">Choose property</option>
@@ -515,7 +829,7 @@ const AdminRoutesPage = () => {
               contractors={contractors}
               expanded={expandedRouteId === route.id}
               key={route.id}
-              onToggle={() => toggleExpanded(route.id)}
+              onToggle={toggleExpanded}
               route={route}
               routeColor={ROUTE_COLORS[routeIndex % ROUTE_COLORS.length]}
             />
@@ -523,147 +837,6 @@ const AdminRoutesPage = () => {
         </section>
       )}
     </div>
-  );
-};
-
-const RouteCard = ({
-  expanded,
-  onToggle,
-  route,
-  routeColor,
-}: {
-  readonly contractors: Awaited<ReturnType<typeof listContractors>>;
-  readonly expanded: boolean;
-  readonly onToggle: () => void;
-  readonly route: RouteRecord;
-  readonly routeColor: string;
-}) => {
-  const stopsWithCoords = route.stops.filter((stop) => {
-    const prop = stop.property ?? stop.workOrder?.quote?.property ?? null;
-    return prop?.latitude && prop?.longitude;
-  });
-
-  return (
-    <article className="rounded-3xl border border-black/6 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
-      <button
-        className="flex w-full items-start justify-between gap-4 p-6 text-left"
-        onClick={onToggle}
-        type="button"
-      >
-        <div className="flex items-start gap-3">
-          <div
-            className="mt-1 h-4 w-4 flex-shrink-0 rounded-full"
-            style={{
-              backgroundColor: `#${routeColor.slice(2)}`,
-            }}
-          />
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
-              {route.routeDate}
-            </p>
-            <h3 className="mt-1 text-xl font-bold tracking-[-0.03em] text-black">
-              {route.name}
-            </h3>
-            <p className="mt-1 text-sm text-black/50">
-              {route.contractor?.displayName ?? "No contractor assigned yet"}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge className="bg-black text-white">
-            {route.stops.length} stops
-          </Badge>
-          {expanded ? (
-            <ChevronUp className="h-4 w-4 text-black/30" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-black/30" />
-          )}
-        </div>
-      </button>
-
-      {expanded && (
-        <div className="border-t border-black/6 p-6">
-          {/* Mini map for this route */}
-          {stopsWithCoords.length > 0 ? (
-            <div className="mb-5">
-              <RadarStaticMap
-                className="h-[250px]"
-                height={250}
-                markers={stopsWithCoords.map((stop) => {
-                  const prop = stop.property ?? stop.workOrder?.quote?.property;
-                  return {
-                    color: routeColor,
-                    latitude: prop!.latitude!,
-                    longitude: prop!.longitude!,
-                  };
-                })}
-                style="radar-light-v1"
-                width={1000}
-              />
-            </div>
-          ) : null}
-
-          {route.stops.length > 0 ? (
-            <div className="space-y-3">
-              {route.stops.map((stop) => {
-                const prop =
-                  stop.property ?? stop.workOrder?.quote?.property ?? null;
-                const customerName =
-                  stop.property?.customer?.user?.name ??
-                  stop.workOrder?.quote?.customer?.user?.name ??
-                  "Unknown client";
-                const isDirectProperty = stop.propertyId && !stop.workOrderId;
-
-                return (
-                  <div
-                    className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4"
-                    key={stop.id}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
-                            Stop {stop.sequence + 1}
-                          </p>
-                          {isDirectProperty ? (
-                            <Badge className="bg-[#d6f18b] text-[#0a1a10]">
-                              Direct
-                            </Badge>
-                          ) : null}
-                        </div>
-                        <p className="mt-2 font-medium text-black">
-                          {customerName}
-                        </p>
-                        <p className="text-sm text-black/50">
-                          {getPropertyDisplayAddress(prop)}
-                        </p>
-                        {prop?.latitude && prop?.longitude ? (
-                          <p className="mt-1 text-xs text-black/30">
-                            {prop.latitude.toFixed(4)},{" "}
-                            {prop.longitude.toFixed(4)}
-                          </p>
-                        ) : null}
-                      </div>
-                      <Badge
-                        className={
-                          stop.status === "completed"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-black/8 text-black/60"
-                        }
-                      >
-                        {stop.status}
-                      </Badge>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-sm text-black/40">No stops added yet.</p>
-          )}
-        </div>
-      )}
-    </article>
   );
 };
 
