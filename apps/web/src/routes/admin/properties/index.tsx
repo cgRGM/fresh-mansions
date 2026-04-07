@@ -7,7 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@fresh-mansions/ui/components/table";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { MapPin } from "lucide-react";
 
@@ -30,13 +30,10 @@ const listProperties = createServerFn({ method: "GET" })
     return properties;
   });
 
-export const Route = createFileRoute("/admin/properties/")({
-  component: AdminPropertiesPage,
-  loader: () => listProperties(),
-});
+const routeApi = getRouteApi("/admin/properties/");
 
-function AdminPropertiesPage() {
-  const properties = Route.useLoaderData();
+const AdminPropertiesPage = () => {
+  const properties = routeApi.useLoaderData();
 
   return (
     <div className="stagger-children space-y-5">
@@ -93,4 +90,9 @@ function AdminPropertiesPage() {
       )}
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/admin/properties/")({
+  component: AdminPropertiesPage,
+  loader: () => listProperties(),
+});

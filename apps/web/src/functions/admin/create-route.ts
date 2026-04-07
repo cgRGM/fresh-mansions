@@ -12,6 +12,7 @@ export const createRouteRecord = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const routeId = crypto.randomUUID();
     await db.insert(route).values({
+      color: data.color ?? "0x0a1a10",
       contractorId: data.contractorId ?? null,
       id: routeId,
       name: data.name,

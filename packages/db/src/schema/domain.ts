@@ -179,6 +179,7 @@ export const workOrder = sqliteTable(
 export const route = sqliteTable(
   "route",
   {
+    color: text("color").notNull().default("0x0a1a10"),
     contractorId: text("contractor_id").references(() => contractor.id),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)

@@ -1,7 +1,14 @@
+/* eslint-disable unicorn/filename-case */
+
 import { Badge } from "@fresh-mansions/ui/components/badge";
 import { Button } from "@fresh-mansions/ui/components/button";
 import { cn } from "@fresh-mansions/ui/lib/utils";
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  getRouteApi,
+  Link,
+  useRouter,
+} from "@tanstack/react-router";
 import {
   ArrowLeft,
   CalendarClock,
@@ -10,6 +17,7 @@ import {
   Home,
   MessageSquare,
 } from "lucide-react";
+import { useCallback } from "react";
 import { toast } from "sonner";
 
 import { getQuoteDetail } from "@/functions/get-quote-detail";
@@ -25,14 +33,81 @@ import {
   getQuoteStatusMeta,
 } from "@/lib/quotes";
 
-export const Route = createFileRoute("/app/quotes/$quoteId")({
-  component: QuoteDetailPage,
-  loader: ({ params }) => getQuoteDetail({ data: { quoteId: params.quoteId } }),
-});
+const hasFinalPriceValue = (
+  value: null | number | undefined
+): value is number => value !== null && value !== undefined;
+
+interface QuoteDetailRecord {
+  finalPrice: null | number;
+  id: string;
+  notes: null | string;
+  photos: {
+    filename: null | string;
+    id: string;
+    quoteId: string;
+    url: string;
+  }[];
+  preferredEndDate: null | string;
+  preferredStartDate: null | string;
+  preferredVisitTime: null | string;
+  property: {
+    addressLine2?: null | string;
+    city?: null | string;
+    formattedAddress?: null | string;
+    fullAddress?: null | string;
+    nickname?: null | string;
+    state?: null | string;
+    street?: null | string;
+    zip?: null | string;
+  } | null;
+  propertySize: null | string;
+  proposedWorkDate: null | string;
+  quotedAt: Date | null;
+  scheduledVisitAt: Date | null;
+  serviceType: string;
+  status: string;
+}
+
+const routeApi = getRouteApi("/app/quotes/$quoteId");
 
 const QuoteDetailPage = () => {
-  const quote = Route.useLoaderData();
+  const quote = routeApi.useLoaderData() as null | QuoteDetailRecord;
   const router = useRouter();
+  const quoteId = quote?.id ?? "";
+
+  const handleResponse = useCallback(
+    async (status: "accepted" | "rejected") => {
+      if (!quote) {
+        return;
+      }
+
+      try {
+        await respondToQuote({
+          data: {
+            quoteId,
+            status,
+          },
+        });
+        toast.success(
+          status === "accepted"
+            ? "Quote accepted. We’ll move it into scheduling."
+            : "Quote declined."
+        );
+        await router.invalidate();
+      } catch {
+        toast.error("We couldn't save your response");
+      }
+    },
+    [quote, quoteId, router]
+  );
+
+  const handleAcceptQuote = useCallback(async () => {
+    await handleResponse("accepted");
+  }, [handleResponse]);
+
+  const handleRejectQuote = useCallback(async () => {
+    await handleResponse("rejected");
+  }, [handleResponse]);
 
   if (!quote) {
     return (
@@ -54,25 +129,9 @@ const QuoteDetailPage = () => {
   }
 
   const statusMeta = getQuoteStatusMeta(quote.status);
-
-  const handleResponse = async (status: "accepted" | "rejected") => {
-    try {
-      await respondToQuote({
-        data: {
-          quoteId: quote.id,
-          status,
-        },
-      });
-      toast.success(
-        status === "accepted"
-          ? "Quote accepted. We’ll move it into scheduling."
-          : "Quote declined."
-      );
-      await router.invalidate();
-    } catch {
-      toast.error("We couldn't save your response");
-    }
-  };
+  const finalQuoteAmount = hasFinalPriceValue(quote.finalPrice)
+    ? formatCents(quote.finalPrice)
+    : "Pending site review";
 
   return (
     <div className="min-h-full bg-[#f4f2ec] px-4 py-6 sm:px-6 lg:px-8">
@@ -189,9 +248,7 @@ const QuoteDetailPage = () => {
               <div className="flex justify-between">
                 <span className="text-black/45">Final quote</span>
                 <span className="font-medium text-black">
-                  {quote.finalPrice != null
-                    ? formatCents(quote.finalPrice)
-                    : "Pending site review"}
+                  {finalQuoteAmount}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -234,14 +291,14 @@ const QuoteDetailPage = () => {
               <div className="flex flex-wrap gap-3">
                 <Button
                   className="rounded-full bg-[#0a1a10] text-white hover:bg-[#0a1a10]/90"
-                  onClick={() => handleResponse("accepted")}
+                  onClick={handleAcceptQuote}
                   type="button"
                 >
                   Accept quote
                 </Button>
                 <Button
                   className="rounded-full"
-                  onClick={() => handleResponse("rejected")}
+                  onClick={handleRejectQuote}
                   type="button"
                   variant="destructive"
                 >
@@ -290,3 +347,8 @@ const QuoteDetailPage = () => {
     </div>
   );
 };
+
+export const Route = createFileRoute("/app/quotes/$quoteId")({
+  component: QuoteDetailPage,
+  loader: ({ params }) => getQuoteDetail({ data: { quoteId: params.quoteId } }),
+});

@@ -79,6 +79,15 @@ app.get("/stops/:id", async (c) => {
   const stop = await db.query.routeStop.findFirst({
     where: eq(routeStop.id, stopId),
     with: {
+      property: {
+        with: {
+          customer: {
+            with: {
+              user: true,
+            },
+          },
+        },
+      },
       route: true,
       workOrder: {
         with: {
@@ -99,7 +108,10 @@ app.get("/stops/:id", async (c) => {
     },
   });
 
-  if (!stop || stop.workOrder?.contractorId !== session.appUser.contractorId) {
+  const assignedContractorId =
+    stop?.workOrder?.contractorId ?? stop?.route?.contractorId ?? null;
+
+  if (!stop || assignedContractorId !== session.appUser.contractorId) {
     return c.json({ error: "Stop not found" }, 404);
   }
 
@@ -118,11 +130,15 @@ app.post("/stops/:id/complete", async (c) => {
   const stop = await db.query.routeStop.findFirst({
     where: eq(routeStop.id, stopId),
     with: {
+      route: true,
       workOrder: true,
     },
   });
 
-  if (!stop || stop.workOrder?.contractorId !== session.appUser.contractorId) {
+  const assignedContractorId =
+    stop?.workOrder?.contractorId ?? stop?.route?.contractorId ?? null;
+
+  if (!stop || assignedContractorId !== session.appUser.contractorId) {
     return c.json({ error: "Stop not found" }, 404);
   }
 
@@ -131,18 +147,20 @@ app.post("/stops/:id/complete", async (c) => {
     .set({ notes: body.note ?? stop.notes, status: "completed" })
     .where(eq(routeStop.id, stopId));
 
-  await db
-    .update(workOrder)
-    .set({
-      completedAt: new Date(),
-      status: "completed",
-    })
-    .where(
-      and(
-        eq(workOrder.id, stop.workOrderId),
-        eq(workOrder.contractorId, session.appUser.contractorId)
-      )
-    );
+  if (stop.workOrderId) {
+    await db
+      .update(workOrder)
+      .set({
+        completedAt: new Date(),
+        status: "completed",
+      })
+      .where(
+        and(
+          eq(workOrder.id, stop.workOrderId),
+          eq(workOrder.contractorId, session.appUser.contractorId)
+        )
+      );
+  }
 
   return c.json({ ok: true });
 });

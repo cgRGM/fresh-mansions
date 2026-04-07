@@ -24,6 +24,8 @@ const statusColors: Record<string, string> = {
   skipped: "bg-red-100 text-red-700",
 };
 
+const getStopLabel = (count: number) => (count === 1 ? "stop" : "stops");
+
 const ContractorDashboard = () => {
   const { contractor, recentRoutes, todayRoute, todayStops, workOrderStats } =
     routeApi.useLoaderData();
@@ -38,6 +40,7 @@ const ContractorDashboard = () => {
     (s) => s.status === "completed"
   ).length;
   const totalToday = todayStops.length;
+  const totalTodayLabel = getStopLabel(totalToday);
 
   return (
     <div className="min-h-full bg-[#f4f2ec] px-4 py-6 sm:px-6 lg:px-8">
@@ -53,7 +56,7 @@ const ContractorDashboard = () => {
             </h2>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-black/50">
               {todayRoute
-                ? `You have ${String(totalToday)} stop${totalToday !== 1 ? "s" : ""} on today's route. ${completedToday} completed so far.`
+                ? `You have ${String(totalToday)} ${totalTodayLabel} on today's route. ${completedToday} completed so far.`
                 : "No route assigned for today. Check back when dispatch finishes scheduling."}
             </p>
 
@@ -112,7 +115,7 @@ const ContractorDashboard = () => {
                         <Map className="h-4 w-4 text-[#d6f18b]" />
                       </div>
                       <span className="text-sm font-medium text-white/80 group-hover:text-white">
-                        View today's route
+                        View today&apos;s route
                       </span>
                       <ArrowRight className="ml-auto h-4 w-4 text-white/20 transition-transform group-hover:translate-x-0.5 group-hover:text-[#d6f18b]" />
                     </div>
@@ -259,7 +262,7 @@ const ContractorDashboard = () => {
                     </Badge>
                   </div>
                   <p className="mt-2 text-xs text-black/40">
-                    {r.stops.length} stop{r.stops.length !== 1 ? "s" : ""}
+                    {r.stops.length} {getStopLabel(r.stops.length)}
                   </p>
                 </Link>
               ))}

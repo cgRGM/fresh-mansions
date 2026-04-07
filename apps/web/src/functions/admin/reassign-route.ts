@@ -8,6 +8,10 @@ import { authMiddleware } from "@/middleware/auth";
 import { requireRoleMiddleware } from "@/middleware/roles";
 
 const reassignRouteSchema = z.object({
+  color: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{6}$/, "Choose a valid route color")
+    .optional(),
   contractorId: z.string().optional(),
   routeDate: z
     .string()
@@ -22,6 +26,7 @@ export const reassignRoute = createServerFn({ method: "POST" })
     const [updatedRoute] = await db
       .update(route)
       .set({
+        color: data.color,
         contractorId: data.contractorId ?? null,
         routeDate: data.routeDate,
       })

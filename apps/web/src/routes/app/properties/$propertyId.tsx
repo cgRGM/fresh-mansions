@@ -1,5 +1,7 @@
+/* eslint-disable unicorn/filename-case */
+
 import { Badge } from "@fresh-mansions/ui/components/badge";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Calendar, Home, MapPin } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
@@ -12,14 +14,39 @@ import {
   getQuoteStatusMeta,
 } from "@/lib/quotes";
 
-export const Route = createFileRoute("/app/properties/$propertyId")({
-  component: PropertyDetailPage,
-  loader: ({ params }) =>
-    getPropertyDetail({ data: { propertyId: params.propertyId } }),
-});
+const hasFinalPriceValue = (
+  value: null | number | undefined
+): value is number => value !== null && value !== undefined;
+
+interface PropertyQuoteRecord {
+  customerId: string;
+  finalPrice: null | number;
+  id: string;
+  preferredEndDate: null | string;
+  preferredStartDate: null | string;
+  proposedWorkDate: null | string;
+  serviceType: string;
+  status: string;
+}
+
+interface PropertyDetailRecord {
+  addressLine2?: null | string;
+  city?: null | string;
+  formattedAddress?: null | string;
+  fullAddress?: null | string;
+  id: string;
+  nickname?: null | string;
+  quotes: PropertyQuoteRecord[];
+  state?: null | string;
+  street?: null | string;
+  zip?: null | string;
+}
+
+const routeApi = getRouteApi("/app/properties/$propertyId");
 
 const PropertyDetailPage = () => {
-  const property = Route.useLoaderData();
+  const property = routeApi.useLoaderData() as null | PropertyDetailRecord;
+  const quoteCount = property?.quotes.length ?? 0;
 
   if (!property) {
     return (
@@ -83,7 +110,7 @@ const PropertyDetailPage = () => {
             Quotes
           </h2>
 
-          {!property.quotes || property.quotes.length === 0 ? (
+          {quoteCount === 0 ? (
             <div className="mt-4">
               <EmptyState
                 action={{
@@ -100,6 +127,9 @@ const PropertyDetailPage = () => {
             <div className="mt-4 space-y-2.5">
               {property.quotes.map((quote) => {
                 const statusMeta = getQuoteStatusMeta(quote.status);
+                const finalPriceText = hasFinalPriceValue(quote.finalPrice)
+                  ? formatCents(quote.finalPrice)
+                  : null;
 
                 return (
                   <Link
@@ -113,9 +143,9 @@ const PropertyDetailPage = () => {
                         {quote.serviceType}
                       </span>
                       <div className="flex flex-wrap items-center gap-3 text-xs text-black/40">
-                        {quote.finalPrice != null ? (
+                        {finalPriceText ? (
                           <span className="font-medium text-emerald-700">
-                            {formatCents(quote.finalPrice)}
+                            {finalPriceText}
                           </span>
                         ) : null}
                         {quote.preferredStartDate ? (
@@ -128,7 +158,10 @@ const PropertyDetailPage = () => {
                           </span>
                         ) : null}
                         {quote.proposedWorkDate ? (
-                          <span>Work date: {formatServiceDate(quote.proposedWorkDate)}</span>
+                          <span>
+                            Work date:{" "}
+                            {formatServiceDate(quote.proposedWorkDate)}
+                          </span>
                         ) : null}
                       </div>
                     </div>
@@ -148,3 +181,9 @@ const PropertyDetailPage = () => {
     </div>
   );
 };
+
+export const Route = createFileRoute("/app/properties/$propertyId")({
+  component: PropertyDetailPage,
+  loader: ({ params }) =>
+    getPropertyDetail({ data: { propertyId: params.propertyId } }),
+});

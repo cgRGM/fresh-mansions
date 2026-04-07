@@ -633,6 +633,7 @@ app.post("/routes", async (c) => {
   const body = routeUpsertSchema.parse(await c.req.json());
   const routeId = crypto.randomUUID();
   await db.insert(route).values({
+    color: body.color ?? "0x0a1a10",
     contractorId: body.contractorId ?? null,
     id: routeId,
     name: body.name,

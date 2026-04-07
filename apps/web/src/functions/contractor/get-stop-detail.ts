@@ -12,6 +12,7 @@ export const getStopDetail = createServerFn({ method: "GET" })
   .inputValidator(z.object({ stopId: z.string() }))
   .middleware([authMiddleware, requireRoleMiddleware("contractor")])
   .handler(async ({ context, data }) => {
+    const { contractorId } = context.session.appUser;
     const stop = await db.query.routeStop.findFirst({
       where: eq(routeStop.id, data.stopId),
       with: {
@@ -35,10 +36,10 @@ export const getStopDetail = createServerFn({ method: "GET" })
       },
     });
 
-    if (
-      !stop ||
-      stop.workOrder?.contractorId !== context.session.appUser.contractorId
-    ) {
+    const assignedContractorId =
+      stop?.workOrder?.contractorId ?? stop?.route?.contractorId ?? null;
+
+    if (!stop || !contractorId || assignedContractorId !== contractorId) {
       return null;
     }
 

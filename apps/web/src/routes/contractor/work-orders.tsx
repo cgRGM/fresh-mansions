@@ -16,6 +16,52 @@ const workOrderStatusColors: Record<string, string> = {
   pending: "bg-black/8 text-black/60",
 };
 
+type WorkOrderData = Awaited<
+  ReturnType<typeof getContractorWorkOrders>
+>["workOrders"][number];
+
+const WorkOrderCard = ({
+  workOrder: wo,
+}: {
+  readonly workOrder: WorkOrderData;
+}) => (
+  <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 transition-all hover:border-black/12 hover:shadow-sm">
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold tracking-[-0.02em] text-black">
+          {wo.quote?.customer?.user?.name ?? "Unknown client"}
+        </p>
+        <p className="mt-1 truncate text-xs text-black/45">
+          {getPropertyDisplayAddress(wo.quote?.property)}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-black/40">
+          {wo.quote?.serviceType ? (
+            <span className="font-medium">{wo.quote.serviceType}</span>
+          ) : null}
+          {wo.scheduledDate ? (
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {wo.scheduledDate}
+            </span>
+          ) : null}
+        </div>
+        {wo.notes ? (
+          <p className="mt-2 text-xs leading-relaxed text-black/40">
+            {wo.notes}
+          </p>
+        ) : null}
+      </div>
+      <Badge
+        className={
+          workOrderStatusColors[wo.status] ?? workOrderStatusColors.pending
+        }
+      >
+        {wo.status}
+      </Badge>
+    </div>
+  </div>
+);
+
 const ContractorWorkOrders = () => {
   const { workOrders } = routeApi.useLoaderData();
 
@@ -103,52 +149,6 @@ const ContractorWorkOrders = () => {
     </div>
   );
 };
-
-type WorkOrderData = Awaited<
-  ReturnType<typeof getContractorWorkOrders>
->["workOrders"][number];
-
-const WorkOrderCard = ({
-  workOrder: wo,
-}: {
-  readonly workOrder: WorkOrderData;
-}) => (
-  <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 transition-all hover:border-black/12 hover:shadow-sm">
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1">
-        <p className="font-semibold tracking-[-0.02em] text-black">
-          {wo.quote?.customer?.user?.name ?? "Unknown client"}
-        </p>
-        <p className="mt-1 truncate text-xs text-black/45">
-          {getPropertyDisplayAddress(wo.quote?.property)}
-        </p>
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-black/40">
-          {wo.quote?.serviceType ? (
-            <span className="font-medium">{wo.quote.serviceType}</span>
-          ) : null}
-          {wo.scheduledDate ? (
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {wo.scheduledDate}
-            </span>
-          ) : null}
-        </div>
-        {wo.notes ? (
-          <p className="mt-2 text-xs leading-relaxed text-black/40">
-            {wo.notes}
-          </p>
-        ) : null}
-      </div>
-      <Badge
-        className={
-          workOrderStatusColors[wo.status] ?? workOrderStatusColors.pending
-        }
-      >
-        {wo.status}
-      </Badge>
-    </div>
-  </div>
-);
 
 export const Route = createFileRoute("/contractor/work-orders")({
   component: ContractorWorkOrders,

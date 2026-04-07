@@ -2,11 +2,11 @@ import { cn } from "heroui-native";
 import type { PropsWithChildren } from "react";
 import { ScrollView, View } from "react-native";
 import type { ScrollViewProps, ViewProps } from "react-native";
-import Animated from "react-native-reanimated";
+import { createAnimatedComponent } from "react-native-reanimated";
 import type { AnimatedProps } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const AnimatedView = Animated.createAnimatedComponent(View);
+const AnimatedView = createAnimatedComponent(View);
 
 type Props = AnimatedProps<ViewProps> & {
   className?: string;

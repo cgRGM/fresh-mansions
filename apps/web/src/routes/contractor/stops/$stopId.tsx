@@ -1,6 +1,8 @@
+/* eslint-disable unicorn/filename-case */
+
 import { Badge } from "@fresh-mansions/ui/components/badge";
 import { Button } from "@fresh-mansions/ui/components/button";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router";
 import { ArrowLeft, CheckCircle, MapPin, User, Wrench } from "lucide-react";
 import { useCallback } from "react";
 import { toast } from "sonner";
@@ -8,11 +10,6 @@ import { toast } from "sonner";
 import { completeStop } from "@/functions/contractor/complete-stop";
 import { getStopDetail } from "@/functions/contractor/get-stop-detail";
 import { getPropertyDisplayAddress } from "@/lib/address";
-
-export const Route = createFileRoute("/contractor/stops/$stopId")({
-  component: StopDetail,
-  loader: ({ params }) => getStopDetail({ data: { stopId: params.stopId } }),
-});
 
 const statusColors: Record<string, string> = {
   arrived: "bg-blue-100 text-blue-700",
@@ -22,8 +19,10 @@ const statusColors: Record<string, string> = {
   skipped: "bg-red-100 text-red-700",
 };
 
-function StopDetail() {
-  const stop = Route.useLoaderData();
+const routeApi = getRouteApi("/contractor/stops/$stopId");
+
+const StopDetail = () => {
+  const stop = routeApi.useLoaderData();
 
   const handleComplete = useCallback(async () => {
     if (!stop) {
@@ -185,7 +184,16 @@ function StopDetail() {
         ) : null}
 
         {/* Action */}
-        {!isCompleted ? (
+        {isCompleted ? (
+          <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-emerald-600" />
+              <p className="font-semibold text-emerald-700">
+                This stop has been completed
+              </p>
+            </div>
+          </section>
+        ) : (
           <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
             <Button
               className="w-full gap-2 sm:w-auto"
@@ -196,17 +204,13 @@ function StopDetail() {
               Mark Complete
             </Button>
           </section>
-        ) : (
-          <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-5 w-5 text-emerald-600" />
-              <p className="font-semibold text-emerald-700">
-                This stop has been completed
-              </p>
-            </div>
-          </section>
         )}
       </div>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/contractor/stops/$stopId")({
+  component: StopDetail,
+  loader: ({ params }) => getStopDetail({ data: { stopId: params.stopId } }),
+});

@@ -2,21 +2,17 @@ import { Badge } from "@fresh-mansions/ui/components/badge";
 import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
 import { Label } from "@fresh-mansions/ui/components/label";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { CreditCard, Receipt } from "lucide-react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
-import { EmptyState } from "@/components/empty-state";
 import { listBilling } from "@/functions/admin/list-billing";
 import { apiClient } from "@/lib/api-client";
 import { formatCents } from "@/lib/estimates";
 
-export const Route = createFileRoute("/admin/billing/")({
-  component: AdminBillingPage,
-  loader: () => listBilling(),
-});
+const routeApi = getRouteApi("/admin/billing/");
 
 const invoiceTone = (value: string) => {
   switch (value) {
@@ -32,8 +28,8 @@ const invoiceTone = (value: string) => {
   }
 };
 
-function AdminBillingPage() {
-  const { invoices, subscriptions } = Route.useLoaderData();
+const AdminBillingPage = () => {
+  const { invoices, subscriptions } = routeApi.useLoaderData();
   const [invoiceForm, setInvoiceForm] = useState({
     amountDue: "",
     customerId: "",
@@ -401,4 +397,9 @@ function AdminBillingPage() {
       </section>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/admin/billing/")({
+  component: AdminBillingPage,
+  loader: () => listBilling(),
+});

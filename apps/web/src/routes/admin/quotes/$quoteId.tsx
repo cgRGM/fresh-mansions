@@ -1,8 +1,15 @@
+/* eslint-disable unicorn/filename-case */
+
 import { Badge } from "@fresh-mansions/ui/components/badge";
 import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
 import { Label } from "@fresh-mansions/ui/components/label";
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  getRouteApi,
+  Link,
+  useRouter,
+} from "@tanstack/react-router";
 import {
   ArrowLeft,
   Calendar,
@@ -12,11 +19,12 @@ import {
   StickyNote,
   User,
 } from "lucide-react";
-import { useState } from "react";
+import type { ChangeEvent } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
-import { getAdminQuoteDetail } from "@/functions/admin/get-quote-detail";
 import { sendQuote } from "@/functions/admin/finalize-quote";
+import { getAdminQuoteDetail } from "@/functions/admin/get-quote-detail";
 import { scheduleVisit } from "@/functions/admin/schedule-visit";
 import { getPropertyDisplayAddress } from "@/lib/address";
 import { formatCents } from "@/lib/estimates";
@@ -38,36 +46,91 @@ const toDateTimeLocal = (value?: Date | null): string => {
   return localDate.toISOString().slice(0, 16);
 };
 
-export const Route = createFileRoute("/admin/quotes/$quoteId")({
-  component: AdminQuoteDetailPage,
-  loader: ({ params }) =>
-    getAdminQuoteDetail({ data: { quoteId: params.quoteId } }),
-});
+const hasFinalPriceValue = (
+  value: null | number | undefined
+): value is number => value !== null && value !== undefined;
+
+interface QuoteDetailRecord {
+  customer: {
+    phone: null | string;
+    user: {
+      email: string;
+      name: string;
+    } | null;
+  } | null;
+  finalPrice: null | number;
+  id: string;
+  notes: null | string;
+  photos: {
+    filename: null | string;
+    id: string;
+    quoteId: string;
+    url: string;
+  }[];
+  preferredEndDate: null | string;
+  preferredStartDate: null | string;
+  preferredVisitTime: null | string;
+  property: null | {
+    addressLine2?: null | string;
+    city?: null | string;
+    formattedAddress?: null | string;
+    fullAddress?: null | string;
+    nickname?: null | string;
+    state?: null | string;
+    street?: null | string;
+    zip?: null | string;
+  };
+  proposedWorkDate: null | string;
+  scheduledVisitAt: Date | null;
+  serviceType: string;
+  status: string;
+  workOrders: { id: string }[];
+}
+
+const routeApi = getRouteApi("/admin/quotes/$quoteId");
 
 const AdminQuoteDetailPage = () => {
-  const quoteData = Route.useLoaderData();
+  const quoteData = routeApi.useLoaderData() as null | QuoteDetailRecord;
   const router = useRouter();
+  const quoteId = quoteData?.id ?? "";
   const [scheduledVisitAt, setScheduledVisitAt] = useState(
     toDateTimeLocal(quoteData?.scheduledVisitAt)
   );
-  const [finalPrice, setFinalPrice] = useState(
-    quoteData?.finalPrice != null ? String(quoteData.finalPrice / 100) : ""
+  const [finalPrice, setFinalPrice] = useState(() =>
+    hasFinalPriceValue(quoteData?.finalPrice)
+      ? String(quoteData.finalPrice / 100)
+      : ""
   );
   const [proposedWorkDate, setProposedWorkDate] = useState(
     quoteData?.proposedWorkDate ?? ""
   );
 
-  if (!quoteData) {
-    return (
-      <div className="rounded-3xl border border-dashed border-black/10 bg-white p-12 text-center text-black/55 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
-        Quote not found.
-      </div>
-    );
-  }
+  const handleScheduledVisitAtChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setScheduledVisitAt(event.target.value);
+    },
+    []
+  );
 
-  const statusMeta = getQuoteStatusMeta(quoteData.status);
+  const handleFinalPriceChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setFinalPrice(event.target.value);
+    },
+    []
+  );
 
-  const handleSchedule = async () => {
+  const handleProposedWorkDateChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setProposedWorkDate(event.target.value);
+    },
+    []
+  );
+
+  const handleSchedule = useCallback(async () => {
+    if (!quoteData) {
+      return;
+    }
+
     if (!scheduledVisitAt) {
       toast.error("Choose the visit date and time first");
       return;
@@ -76,7 +139,7 @@ const AdminQuoteDetailPage = () => {
     try {
       await scheduleVisit({
         data: {
-          quoteId: quoteData.id,
+          quoteId,
           scheduledVisitAt: new Date(scheduledVisitAt).toISOString(),
         },
       });
@@ -85,9 +148,13 @@ const AdminQuoteDetailPage = () => {
     } catch {
       toast.error("Failed to schedule the visit");
     }
-  };
+  }, [quoteData, quoteId, router, scheduledVisitAt]);
 
-  const handleSendQuote = async () => {
+  const handleSendQuote = useCallback(async () => {
+    if (!quoteData) {
+      return;
+    }
+
     const parsedFinalPrice = Math.round(Number(finalPrice) * 100);
 
     if (Number.isNaN(parsedFinalPrice) || parsedFinalPrice <= 0) {
@@ -105,7 +172,7 @@ const AdminQuoteDetailPage = () => {
         data: {
           finalPrice: parsedFinalPrice,
           proposedWorkDate,
-          quoteId: quoteData.id,
+          quoteId,
         },
       });
       toast.success("Quote sent to customer");
@@ -113,7 +180,26 @@ const AdminQuoteDetailPage = () => {
     } catch {
       toast.error("Failed to send the quote");
     }
-  };
+  }, [finalPrice, proposedWorkDate, quoteData, quoteId, router]);
+
+  if (!quoteData) {
+    return (
+      <div className="rounded-3xl border border-dashed border-black/10 bg-white p-12 text-center text-black/55 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        Quote not found.
+      </div>
+    );
+  }
+
+  const currentQuotePrice = hasFinalPriceValue(quoteData.finalPrice)
+    ? formatCents(quoteData.finalPrice)
+    : "Not sent yet";
+  const statusMeta = getQuoteStatusMeta(quoteData.status);
+  const propertyNickname =
+    quoteData.property &&
+    "nickname" in quoteData.property &&
+    typeof quoteData.property.nickname === "string"
+      ? quoteData.property.nickname
+      : null;
 
   return (
     <div className="stagger-children space-y-5">
@@ -166,7 +252,7 @@ const AdminQuoteDetailPage = () => {
                 <p className="font-medium text-black">
                   {getPropertyDisplayAddress(quoteData.property)}
                 </p>
-                <p>Nickname: {quoteData.property?.nickname ?? "None"}</p>
+                <p>Nickname: {propertyNickname ?? "None"}</p>
               </div>
             </div>
             <div className="flex items-start gap-2">
@@ -204,7 +290,7 @@ const AdminQuoteDetailPage = () => {
               <Input
                 className="h-12 rounded-2xl border-black/10"
                 id="scheduledVisitAt"
-                onChange={(event) => setScheduledVisitAt(event.target.value)}
+                onChange={handleScheduledVisitAtChange}
                 type="datetime-local"
                 value={scheduledVisitAt}
               />
@@ -223,7 +309,7 @@ const AdminQuoteDetailPage = () => {
                 <Input
                   className="h-12 rounded-2xl border-black/10"
                   id="finalPrice"
-                  onChange={(event) => setFinalPrice(event.target.value)}
+                  onChange={handleFinalPriceChange}
                   step="0.01"
                   type="number"
                   value={finalPrice}
@@ -234,7 +320,7 @@ const AdminQuoteDetailPage = () => {
                 <Input
                   className="h-12 rounded-2xl border-black/10"
                   id="proposedWorkDate"
-                  onChange={(event) => setProposedWorkDate(event.target.value)}
+                  onChange={handleProposedWorkDateChange}
                   type="date"
                   value={proposedWorkDate}
                 />
@@ -252,18 +338,12 @@ const AdminQuoteDetailPage = () => {
             </div>
 
             <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 text-sm text-black/55">
-              <p>
-                Current quote:{" "}
-                {quoteData.finalPrice != null
-                  ? formatCents(quoteData.finalPrice)
-                  : "Not sent yet"}
-              </p>
+              <p>Current quote: {currentQuotePrice}</p>
               <p className="mt-1">
-                Proposed work date: {formatServiceDate(quoteData.proposedWorkDate)}
+                Proposed work date:{" "}
+                {formatServiceDate(quoteData.proposedWorkDate)}
               </p>
-              <p className="mt-1">
-                Customer status: {statusMeta.label}
-              </p>
+              <p className="mt-1">Customer status: {statusMeta.label}</p>
               <p className="mt-1">
                 Work orders created: {quoteData.workOrders.length}
               </p>
@@ -320,3 +400,9 @@ const AdminQuoteDetailPage = () => {
     </div>
   );
 };
+
+export const Route = createFileRoute("/admin/quotes/$quoteId")({
+  component: AdminQuoteDetailPage,
+  loader: ({ params }) =>
+    getAdminQuoteDetail({ data: { quoteId: params.quoteId } }),
+});

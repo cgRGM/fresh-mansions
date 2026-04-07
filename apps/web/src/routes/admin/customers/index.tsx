@@ -1,4 +1,3 @@
-import { db } from "@fresh-mansions/db";
 import { Button } from "@fresh-mansions/ui/components/button";
 import { Input } from "@fresh-mansions/ui/components/input";
 import { Label } from "@fresh-mansions/ui/components/label";
@@ -11,7 +10,6 @@ import {
   TableRow,
 } from "@fresh-mansions/ui/components/table";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
 import { UserPlus } from "lucide-react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useState } from "react";
@@ -21,21 +19,7 @@ import { EmptyState } from "@/components/empty-state";
 import { AddressAutocomplete } from "@/components/quote/address-autocomplete";
 import type { QuoteAddressSelection } from "@/components/quote/address-autocomplete";
 import { createCustomerBackfill } from "@/functions/admin/create-customer-backfill";
-import { authMiddleware } from "@/middleware/auth";
-import { requireRoleMiddleware } from "@/middleware/roles";
-
-const listCustomers = createServerFn({ method: "GET" })
-  .middleware([authMiddleware, requireRoleMiddleware("admin")])
-  .handler(() =>
-    db.query.customer.findMany({
-      orderBy: (customerTable, { desc }) => [desc(customerTable.createdAt)],
-      with: {
-        properties: true,
-        subscriptions: true,
-        user: true,
-      },
-    })
-  );
+import { listCustomers } from "@/functions/admin/list-customers";
 
 const adminCustomersRouteApi = getRouteApi("/admin/customers/");
 
@@ -235,7 +219,12 @@ const AdminCustomersPage = () => {
               {customers.map((customer) => (
                 <TableRow key={customer.id}>
                   <TableCell className="font-medium">
-                    {customer.user?.name ?? "Unknown"}
+                    <a
+                      className="underline-offset-2 hover:underline"
+                      href={`/admin/customers/${customer.id}`}
+                    >
+                      {customer.user?.name ?? "Unknown"}
+                    </a>
                   </TableCell>
                   <TableCell>{customer.user?.email ?? "—"}</TableCell>
                   <TableCell>{customer.phone ?? "—"}</TableCell>

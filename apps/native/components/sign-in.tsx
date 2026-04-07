@@ -12,7 +12,7 @@ import {
 import { useRef } from "react";
 import type { TextInput } from "react-native";
 import { Text, View } from "react-native";
-import z from "zod";
+import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
 

@@ -1,7 +1,6 @@
 import { db } from "@fresh-mansions/db";
 import { createServerFn } from "@tanstack/react-start";
 
-import { withPropertiesFullAddress } from "@/lib/quote-records";
 import { authMiddleware } from "@/middleware/auth";
 import { requireRoleMiddleware } from "@/middleware/roles";
 

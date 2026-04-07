@@ -49,3 +49,10 @@ coverage
 .cache
 tmp
 temp
+
+# Local Claude worktrees
+.claude/worktrees/
+
+# Local agent assets
+.agents/
+.claude/

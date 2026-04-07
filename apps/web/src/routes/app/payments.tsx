@@ -6,12 +6,7 @@ import { EmptyState } from "@/components/empty-state";
 import { getBillingSummary } from "@/functions/get-billing-summary";
 import { formatCents } from "@/lib/estimates";
 
-export const Route = createFileRoute("/app/payments")({
-  component: PaymentsPage,
-  loader: () => getBillingSummary(),
-});
-
-function PaymentsPage() {
+const PaymentsPage = () => {
   const { invoices, subscriptions } = Route.useLoaderData();
 
   const hasContent = subscriptions.length > 0 || invoices.length > 0;
@@ -32,13 +27,7 @@ function PaymentsPage() {
           </p>
         </div>
 
-        {!hasContent ? (
-          <EmptyState
-            description="When you approve a quote and a recurring plan is set up, your subscriptions and invoices will appear here."
-            illustration="leaf"
-            title="No billing activity yet"
-          />
-        ) : (
+        {hasContent ? (
           <>
             {/* Subscriptions */}
             {subscriptions.length > 0 ? (
@@ -125,8 +114,19 @@ function PaymentsPage() {
               </section>
             ) : null}
           </>
+        ) : (
+          <EmptyState
+            description="When you approve a quote and a recurring plan is set up, your subscriptions and invoices will appear here."
+            illustration="leaf"
+            title="No billing activity yet"
+          />
         )}
       </div>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/app/payments")({
+  component: PaymentsPage,
+  loader: () => getBillingSummary(),
+});

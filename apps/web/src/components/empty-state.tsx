@@ -19,7 +19,7 @@ const GrassIllustration = () => (
       stroke="oklch(0.55 0.15 140)"
       strokeLinecap="round"
       strokeWidth="3"
-      style={{ transformOrigin: "60px 112px", animationDelay: "0s" }}
+      style={{ animationDelay: "0s", transformOrigin: "60px 112px" }}
     />
     <path
       className="animate-sway"
@@ -27,7 +27,7 @@ const GrassIllustration = () => (
       stroke="oklch(0.6 0.14 130)"
       strokeLinecap="round"
       strokeWidth="3.5"
-      style={{ transformOrigin: "80px 112px", animationDelay: "0.3s" }}
+      style={{ animationDelay: "0.3s", transformOrigin: "80px 112px" }}
     />
     <path
       className="animate-sway"
@@ -35,7 +35,7 @@ const GrassIllustration = () => (
       stroke="oklch(0.5 0.16 145)"
       strokeLinecap="round"
       strokeWidth="4"
-      style={{ transformOrigin: "96px 112px", animationDelay: "0.6s" }}
+      style={{ animationDelay: "0.6s", transformOrigin: "96px 112px" }}
     />
     <path
       className="animate-sway"
@@ -43,7 +43,7 @@ const GrassIllustration = () => (
       stroke="oklch(0.58 0.13 135)"
       strokeLinecap="round"
       strokeWidth="3"
-      style={{ transformOrigin: "112px 112px", animationDelay: "0.15s" }}
+      style={{ animationDelay: "0.15s", transformOrigin: "112px 112px" }}
     />
     <path
       className="animate-sway"
@@ -51,7 +51,7 @@ const GrassIllustration = () => (
       stroke="oklch(0.52 0.15 142)"
       strokeLinecap="round"
       strokeWidth="3.5"
-      style={{ transformOrigin: "132px 112px", animationDelay: "0.45s" }}
+      style={{ animationDelay: "0.45s", transformOrigin: "132px 112px" }}
     />
     {/* Small leaves / detail */}
     <circle cx="76" cy="22" fill="oklch(0.7 0.12 130)" r="3" />
@@ -83,7 +83,7 @@ const LeafIllustration = () => (
       stroke="oklch(0.55 0.13 135)"
       strokeLinecap="round"
       strokeWidth="2"
-      style={{ transformOrigin: "80px 110px", animationDelay: "0.4s" }}
+      style={{ animationDelay: "0.4s", transformOrigin: "80px 110px" }}
     />
     {/* Stem */}
     <path
@@ -150,7 +150,7 @@ const illustrations = {
   sun: SunIllustration,
 } as const;
 
-type EmptyStateProps = {
+interface EmptyStateProps {
   readonly action?: {
     href: string;
     label: string;
@@ -160,7 +160,7 @@ type EmptyStateProps = {
   readonly icon?: ReactNode;
   readonly illustration?: keyof typeof illustrations;
   readonly title: string;
-};
+}
 
 const EmptyState = ({
   action,

@@ -4,10 +4,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 
 export const listActiveServices = createServerFn({ method: "GET" }).handler(
-  async () => {
-    return db.query.service.findMany({
+  async () =>
+    db.query.service.findMany({
       orderBy: (table, { asc }) => [asc(table.sortOrder)],
       where: eq(service.isActive, true),
-    });
-  }
+    })
 );

@@ -43,6 +43,13 @@
       "when": 1775343600000,
       "tag": "0005_add_service_table_and_route_stop_property",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1775430000000,
+      "tag": "0006_route_color",
+      "breakpoints": true
     }
   ]
 }

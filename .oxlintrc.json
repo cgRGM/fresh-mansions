@@ -3,5 +3,35 @@
   "extends": [
     "./node_modules/ultracite/config/oxlint/core/.oxlintrc.json",
     "./node_modules/ultracite/config/oxlint/react/.oxlintrc.json"
+  ],
+  "ignorePatterns": [
+    ".agents/**",
+    ".claude/**",
+    "apps/web/src/routeTree.gen.ts"
+  ],
+  "rules": {
+    "eslint/func-style": "off",
+    "eslint/no-use-before-define": "off",
+    "eslint/no-void": "off",
+    "eslint/complexity": "off",
+    "eslint/prefer-destructuring": "off",
+    "eslint/require-await": "off",
+    "jsx-a11y/label-has-associated-control": "off",
+    "oxc/no-barrel-file": "off",
+    "react-perf/jsx-no-new-function-as-prop": "off",
+    "react/no-unescaped-entities": "off",
+    "typescript/triple-slash-reference": "off",
+    "typescript/no-empty-interface": "off",
+    "typescript/no-empty-object-type": "off",
+    "typescript/no-non-null-assertion": "off",
+    "unicorn/prefer-module": "off"
+  },
+  "overrides": [
+    {
+      "files": ["apps/web/src/routes/**/$*.tsx"],
+      "rules": {
+        "unicorn/filename-case": "off"
+      }
+    }
   ]
 }

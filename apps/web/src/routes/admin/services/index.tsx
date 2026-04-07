@@ -5,8 +5,8 @@ import { Label } from "@fresh-mansions/ui/components/label";
 import { Textarea } from "@fresh-mansions/ui/components/textarea";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { GripVertical, Pencil, Plus, Settings, Trash2, X } from "lucide-react";
-import type { FormEvent } from "react";
-import { useCallback, useState } from "react";
+import type { FormEvent, MouseEvent } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { deleteService } from "@/functions/admin/delete-service";
@@ -30,6 +30,10 @@ const AdminServicesPage = () => {
   const services = routeApi.useLoaderData();
   const [editingService, setEditingService] = useState<null | typeof emptyForm>(
     null
+  );
+  const servicesById = useMemo(
+    () => new Map(services.map((service) => [service.id, service])),
+    [services]
   );
 
   const handleEdit = useCallback((svc: ServiceRecord) => {
@@ -96,6 +100,82 @@ const AdminServicesPage = () => {
     }
   }, []);
 
+  const handleNameChange = useCallback((event: FormEvent<HTMLInputElement>) => {
+    const target = event.currentTarget;
+    setEditingService((current) =>
+      current ? { ...current, name: target.value } : current
+    );
+  }, []);
+
+  const handleSlugChange = useCallback((event: FormEvent<HTMLInputElement>) => {
+    const target = event.currentTarget;
+    setEditingService((current) =>
+      current ? { ...current, slug: target.value } : current
+    );
+  }, []);
+
+  const handleDescriptionChange = useCallback(
+    (event: FormEvent<HTMLTextAreaElement>) => {
+      const target = event.currentTarget;
+      setEditingService((current) =>
+        current ? { ...current, description: target.value } : current
+      );
+    },
+    []
+  );
+
+  const handleSortOrderChange = useCallback(
+    (event: FormEvent<HTMLInputElement>) => {
+      const target = event.currentTarget;
+      setEditingService((current) =>
+        current ? { ...current, sortOrder: Number(target.value) } : current
+      );
+    },
+    []
+  );
+
+  const handleIsActiveChange = useCallback(
+    (event: FormEvent<HTMLInputElement>) => {
+      const target = event.currentTarget;
+      setEditingService((current) =>
+        current ? { ...current, isActive: target.checked } : current
+      );
+    },
+    []
+  );
+
+  const handleEditClick = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      const { serviceId } = event.currentTarget.dataset;
+
+      if (!serviceId) {
+        return;
+      }
+
+      const service = servicesById.get(serviceId);
+
+      if (!service) {
+        return;
+      }
+
+      handleEdit(service);
+    },
+    [handleEdit, servicesById]
+  );
+
+  const handleDeleteClick = useCallback(
+    async (event: MouseEvent<HTMLButtonElement>) => {
+      const { serviceId } = event.currentTarget.dataset;
+
+      if (!serviceId) {
+        return;
+      }
+
+      await handleDelete(serviceId);
+    },
+    [handleDelete]
+  );
+
   return (
     <div className="stagger-children space-y-5">
       {/* Header */}
@@ -147,11 +227,7 @@ const AdminServicesPage = () => {
               <Input
                 className="h-12 rounded-2xl border-black/10"
                 id="svc-name"
-                onChange={(e) =>
-                  setEditingService((s) =>
-                    s ? { ...s, name: e.target.value } : s
-                  )
-                }
+                onChange={handleNameChange}
                 placeholder="Mowing"
                 value={editingService.name}
               />
@@ -161,11 +237,7 @@ const AdminServicesPage = () => {
               <Input
                 className="h-12 rounded-2xl border-black/10"
                 id="svc-slug"
-                onChange={(e) =>
-                  setEditingService((s) =>
-                    s ? { ...s, slug: e.target.value } : s
-                  )
-                }
+                onChange={handleSlugChange}
                 placeholder="mowing"
                 value={editingService.slug}
               />
@@ -175,11 +247,7 @@ const AdminServicesPage = () => {
               <Textarea
                 className="min-h-20 rounded-2xl border-black/10"
                 id="svc-description"
-                onChange={(e) =>
-                  setEditingService((s) =>
-                    s ? { ...s, description: e.target.value } : s
-                  )
-                }
+                onChange={handleDescriptionChange}
                 placeholder="Weekly or bi-weekly lawn maintenance"
                 value={editingService.description}
               />
@@ -189,11 +257,7 @@ const AdminServicesPage = () => {
               <Input
                 className="h-12 rounded-2xl border-black/10"
                 id="svc-order"
-                onChange={(e) =>
-                  setEditingService((s) =>
-                    s ? { ...s, sortOrder: Number(e.target.value) } : s
-                  )
-                }
+                onChange={handleSortOrderChange}
                 type="number"
                 value={editingService.sortOrder}
               />
@@ -203,11 +267,7 @@ const AdminServicesPage = () => {
                 <input
                   checked={editingService.isActive}
                   className="h-4 w-4 rounded accent-emerald-600"
-                  onChange={(e) =>
-                    setEditingService((s) =>
-                      s ? { ...s, isActive: e.target.checked } : s
-                    )
-                  }
+                  onChange={handleIsActiveChange}
                   type="checkbox"
                 />
                 <span className="text-sm font-medium text-black">
@@ -275,14 +335,16 @@ const AdminServicesPage = () => {
                 <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <button
                     className="rounded-xl p-2 text-black/30 transition hover:bg-black/5 hover:text-black"
-                    onClick={() => handleEdit(svc)}
+                    data-service-id={svc.id}
+                    onClick={handleEditClick}
                     type="button"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <button
                     className="rounded-xl p-2 text-red-400 transition hover:bg-red-50 hover:text-red-600"
-                    onClick={() => handleDelete(svc.id)}
+                    data-service-id={svc.id}
+                    onClick={handleDeleteClick}
                     type="button"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

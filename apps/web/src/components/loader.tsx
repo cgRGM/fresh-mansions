@@ -17,11 +17,11 @@ export default function Loader() {
             strokeLinecap="round"
             strokeWidth="3"
             style={{
-              transformOrigin: "24px 60px",
               animationDelay: "0ms",
+              animationDirection: "alternate",
               animationDuration: "0.8s",
               animationIterationCount: "infinite",
-              animationDirection: "alternate",
+              transformOrigin: "24px 60px",
             }}
           />
           <path
@@ -31,11 +31,11 @@ export default function Loader() {
             strokeLinecap="round"
             strokeWidth="3.5"
             style={{
-              transformOrigin: "40px 60px",
               animationDelay: "150ms",
+              animationDirection: "alternate",
               animationDuration: "0.8s",
               animationIterationCount: "infinite",
-              animationDirection: "alternate",
+              transformOrigin: "40px 60px",
             }}
           />
           <path
@@ -45,11 +45,11 @@ export default function Loader() {
             strokeLinecap="round"
             strokeWidth="4"
             style={{
-              transformOrigin: "56px 60px",
               animationDelay: "300ms",
+              animationDirection: "alternate",
               animationDuration: "0.8s",
               animationIterationCount: "infinite",
-              animationDirection: "alternate",
+              transformOrigin: "56px 60px",
             }}
           />
           <path
@@ -59,11 +59,11 @@ export default function Loader() {
             strokeLinecap="round"
             strokeWidth="3"
             style={{
-              transformOrigin: "72px 60px",
               animationDelay: "450ms",
+              animationDirection: "alternate",
               animationDuration: "0.8s",
               animationIterationCount: "infinite",
-              animationDirection: "alternate",
+              transformOrigin: "72px 60px",
             }}
           />
           <ellipse

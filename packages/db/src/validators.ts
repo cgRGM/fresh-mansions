@@ -250,6 +250,10 @@ export const workOrderAssignmentSchema = zod.object({
 });
 
 export const routeUpsertSchema = zod.object({
+  color: zod
+    .string()
+    .regex(/^0x[0-9a-fA-F]{6}$/, "Color must be a hex value like 0x0a1a10")
+    .optional(),
   contractorId: zod.string().optional(),
   name: zod.string().min(2),
   routeDate: zod.string().min(1),

@@ -6,8 +6,8 @@ import { requireRoleMiddleware } from "@/middleware/roles";
 
 export const listServices = createServerFn({ method: "GET" })
   .middleware([authMiddleware, requireRoleMiddleware("admin")])
-  .handler(async () => {
-    return db.query.service.findMany({
+  .handler(async () =>
+    db.query.service.findMany({
       orderBy: (table, { asc }) => [asc(table.sortOrder)],
-    });
-  });
+    })
+  );

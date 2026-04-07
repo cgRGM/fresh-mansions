@@ -1,22 +1,22 @@
 import { env } from "@fresh-mansions/env/web";
 import { useEffect, useRef, useState } from "react";
 
-type MapMarker = {
+interface MapMarker {
   address: string;
   color?: string;
   id: string;
   label?: string;
   latitude: number;
   longitude: number;
-};
+}
 
-type RadarRouteMapProps = {
+interface RadarRouteMapProps {
   readonly className?: string;
   readonly markers: MapMarker[];
   readonly onMarkerClick?: (marker: MapMarker) => void;
   readonly selectedMarkerId?: null | string;
   readonly style?: "radar-dark-v1" | "radar-default-v1" | "radar-light-v1";
-};
+}
 
 const DEFAULT_CENTER: [number, number] = [-79.4428, 38.4496];
 const DEFAULT_ZOOM = 11;
@@ -68,9 +68,15 @@ const RadarRouteMap = ({
             ? ([markers[0].longitude, markers[0].latitude] as [number, number])
             : DEFAULT_CENTER;
 
+        const container = containerRef.current;
+
+        if (!container) {
+          return;
+        }
+
         const map = Radar.ui.map({
           center,
-          container: containerRef.current!,
+          container,
           style,
           zoom: DEFAULT_ZOOM,
         });
@@ -115,9 +121,13 @@ const RadarRouteMap = ({
 
           setIsLoaded(true);
         });
-      } catch (err) {
+      } catch (caughtError) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load map");
+          setError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Failed to load map"
+          );
         }
       }
     };

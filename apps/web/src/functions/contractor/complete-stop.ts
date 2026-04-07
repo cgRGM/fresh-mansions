@@ -16,17 +16,19 @@ export const completeStop = createServerFn({ method: "POST" })
   )
   .middleware([authMiddleware, requireRoleMiddleware("contractor")])
   .handler(async ({ context, data }) => {
+    const { contractorId } = context.session.appUser;
     const stop = await db.query.routeStop.findFirst({
       where: eq(routeStop.id, data.stopId),
       with: {
+        route: true,
         workOrder: true,
       },
     });
 
-    if (
-      !stop ||
-      stop.workOrder?.contractorId !== context.session.appUser.contractorId
-    ) {
+    const assignedContractorId =
+      stop?.workOrder?.contractorId ?? stop?.route?.contractorId ?? null;
+
+    if (!stop || !contractorId || assignedContractorId !== contractorId) {
       throw new Error("Stop not found");
     }
 
@@ -38,18 +40,20 @@ export const completeStop = createServerFn({ method: "POST" })
       })
       .where(eq(routeStop.id, data.stopId));
 
-    await db
-      .update(workOrder)
-      .set({
-        completedAt: new Date(),
-        status: "completed",
-      })
-      .where(
-        and(
-          eq(workOrder.id, stop.workOrderId),
-          eq(workOrder.contractorId, context.session.appUser.contractorId)
-        )
-      );
+    if (stop.workOrderId) {
+      await db
+        .update(workOrder)
+        .set({
+          completedAt: new Date(),
+          status: "completed",
+        })
+        .where(
+          and(
+            eq(workOrder.id, stop.workOrderId),
+            eq(workOrder.contractorId, contractorId)
+          )
+        );
+    }
 
     return { ok: true };
   });
