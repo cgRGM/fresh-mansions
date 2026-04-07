@@ -58,6 +58,18 @@ bun run check        # Lint and format check (Ultracite / Oxlint + Oxfmt)
 bun run fix          # Auto-fix lint and formatting issues
 ```
 
+### Testing
+
+```bash
+bun run test         # Run all tests once
+bun run test:unit    # Run unit tests
+bun run test:watch   # Run tests in watch mode
+```
+
+Testing strategy and phased roadmap:
+
+- `docs/testing-strategy.md`
+
 ### Deployment
 
 ```bash

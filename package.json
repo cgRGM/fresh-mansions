@@ -37,6 +37,11 @@
     "db:generate": "turbo -F @fresh-mansions/db db:generate",
     "deploy": "turbo -F @fresh-mansions/infra deploy",
     "destroy": "turbo -F @fresh-mansions/infra destroy",
+    "test": "vitest run",
+    "test:ci": "bun run test:unit && bun run test:integration",
+    "test:integration": "vitest run tests/integration",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "alchemy:dev": "turbo -F @fresh-mansions/infra dev"
@@ -55,7 +60,8 @@
     "oxlint": "latest",
     "turbo": "^2.8.12",
     "typescript": "^5",
-    "ultracite": "7.3.1"
+    "ultracite": "7.3.1",
+    "vitest": "^3.2.4"
   },
   "packageManager": "bun@1.3.10"
 }
