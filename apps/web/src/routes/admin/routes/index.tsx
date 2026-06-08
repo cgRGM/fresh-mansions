@@ -12,7 +12,6 @@ import {
   KeyRound,
   LayoutDashboard,
   MapPin,
-  Plus,
   RefreshCcw,
   Send,
 } from "lucide-react";
@@ -27,7 +26,6 @@ import type { QuoteAddressSelection } from "@/components/quote/address-autocompl
 import { RadarStaticMap } from "@/components/radar-static-map";
 import type { StaticMapPath } from "@/components/radar-static-map";
 import { addCustomerProperty } from "@/functions/admin/add-customer-property";
-import { addPropertiesToRoute } from "@/functions/admin/add-properties-to-route";
 import { addPropertyToRoute } from "@/functions/admin/add-property-to-route";
 import { addRouteStop } from "@/functions/admin/add-route-stop";
 import { checkAddressDuplicate } from "@/functions/admin/check-address-duplicate";
@@ -36,7 +34,6 @@ import { createRouteRecord } from "@/functions/admin/create-route";
 import { getMyRouteOnlineSettings } from "@/functions/admin/get-myrouteonline-settings";
 import { listContractors } from "@/functions/admin/list-contractors";
 import { listCustomers } from "@/functions/admin/list-customers";
-import { listProperties } from "@/functions/admin/list-properties";
 import { listRoutes } from "@/functions/admin/list-routes";
 import { listWorkOrders } from "@/functions/admin/list-work-orders";
 import { reassignRoute } from "@/functions/admin/reassign-route";
@@ -57,7 +54,6 @@ interface AdminRoutesLoaderData {
   contractors: Awaited<ReturnType<typeof listContractors>>;
   customers: Awaited<ReturnType<typeof listCustomers>>;
   mroSettings: Awaited<ReturnType<typeof getMyRouteOnlineSettings>>;
-  properties: Awaited<ReturnType<typeof listProperties>>;
   routes: Awaited<ReturnType<typeof listRoutes>>;
   workOrders: Awaited<ReturnType<typeof listWorkOrders>>;
 }
@@ -482,13 +478,13 @@ const RouteCard = ({
             stopIds: orderedStopIds,
           },
         });
-        toast.success("Route stop order updated");
+        toast.success("Dispatch order updated");
         window.location.reload();
       } catch (error) {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Failed to reorder route stops"
+            : "Failed to update dispatch order"
         );
       } finally {
         setIsSavingReorder(false);
@@ -506,13 +502,13 @@ const RouteCard = ({
           routeId: route.id,
         },
       });
-      toast.success("Route sent to MyRouteOnline");
+      toast.success("Stop list sent to MyRouteOnline");
       window.location.reload();
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to send route to MyRouteOnline"
+          : "Failed to send stop list to MyRouteOnline"
       );
     } finally {
       setIsSubmittingMro(false);
@@ -530,7 +526,7 @@ const RouteCard = ({
       });
 
       if (result.isFinished) {
-        toast.success("MyRouteOnline route imported");
+        toast.success("MyRouteOnline stop order imported");
         window.location.reload();
       } else {
         toast.message(
@@ -543,7 +539,7 @@ const RouteCard = ({
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to import MyRouteOnline route"
+          : "Failed to import MyRouteOnline stop order"
       );
     } finally {
       setIsSyncingMro(false);
@@ -624,7 +620,7 @@ const RouteCard = ({
             onSubmit={handleReassignmentSubmit}
           >
             <div className="space-y-1">
-              <Label htmlFor={`route-date-${route.id}`}>Route date</Label>
+              <Label htmlFor={`route-date-${route.id}`}>Dispatch date</Label>
               <Input
                 className="h-10 rounded-xl border-black/10 bg-white"
                 id={`route-date-${route.id}`}
@@ -665,7 +661,7 @@ const RouteCard = ({
                 disabled={isSavingReassignment}
                 type="submit"
               >
-                {isSavingReassignment ? "Saving..." : "Update route"}
+                {isSavingReassignment ? "Saving..." : "Save dispatch details"}
               </Button>
               <Button
                 className="h-10 rounded-full border-black/20"
@@ -675,7 +671,7 @@ const RouteCard = ({
                 variant="outline"
               >
                 <Send className="mr-2 h-4 w-4" />
-                {isSubmittingMro ? "Sending..." : "Send to MRO"}
+                {isSubmittingMro ? "Sending..." : "Send stop list to MRO"}
               </Button>
               <Button
                 className="h-10 rounded-full border-black/20"
@@ -685,11 +681,11 @@ const RouteCard = ({
                 variant="outline"
               >
                 <RefreshCcw className="mr-2 h-4 w-4" />
-                {isSyncingMro ? "Importing..." : "Import MRO route"}
+                {isSyncingMro ? "Importing..." : "Import MRO order"}
               </Button>
               {canSendToMro ? null : (
                 <p className="self-center text-xs text-black/40">
-                  MyRouteOnline needs at least {MIN_MRO_ROUTE_STOPS} stops.
+                  MRO needs at least {MIN_MRO_ROUTE_STOPS} queued stops.
                 </p>
               )}
             </div>
@@ -756,7 +752,9 @@ const RouteCard = ({
               ))}
             </div>
           ) : (
-            <p className="text-sm text-black/40">No stops added yet.</p>
+            <p className="text-sm text-black/40">
+              No stops queued for this route yet.
+            </p>
           )}
         </div>
       ) : null}
@@ -765,18 +763,8 @@ const RouteCard = ({
 };
 
 const AdminRoutesPage = () => {
-  const {
-    contractors,
-    customers,
-    mroSettings,
-    properties,
-    routes,
-    workOrders,
-  } = adminRoutesRouteApi.useLoaderData() as AdminRoutesLoaderData;
-  const [batchPropertyForm, setBatchPropertyForm] = useState({
-    propertyIds: [] as string[],
-    routeId: "",
-  });
+  const { contractors, customers, mroSettings, routes, workOrders } =
+    adminRoutesRouteApi.useLoaderData() as AdminRoutesLoaderData;
   const [createCustomerAddressError, setCreateCustomerAddressError] =
     useState("");
   const [createCustomerForm, setCreateCustomerForm] = useState({
@@ -831,7 +819,6 @@ const AdminRoutesPage = () => {
   const [selectedRouteFilter, setSelectedRouteFilter] = useState<string>("all");
   const [stopForm, setStopForm] = useState({
     routeId: "",
-    sequence: "0",
     workOrderId: "",
   });
 
@@ -846,6 +833,24 @@ const AdminRoutesPage = () => {
     () => workOrders.filter((order) => order.status !== "completed"),
     [workOrders]
   );
+
+  const routeStats = useMemo(() => {
+    let queuedStops = 0;
+    let readyRoutes = 0;
+
+    for (const route of routes) {
+      queuedStops += route.stops.length;
+
+      if (route.mroStatus === "finished" || route.status === "ready") {
+        readyRoutes += 1;
+      }
+    }
+
+    return {
+      queuedStops,
+      readyRoutes,
+    };
+  }, [routes]);
 
   const allMapMarkers = useMemo(() => {
     const markers: RouteMapMarker[] = [];
@@ -934,32 +939,6 @@ const AdminRoutesPage = () => {
     [allMapPaths, selectedRouteFilter]
   );
 
-  const assignedPropertyIds = useMemo(() => {
-    const ids = new Set<string>();
-
-    for (const route of routes) {
-      for (const stop of route.stops) {
-        if (stop.propertyId) {
-          ids.add(stop.propertyId);
-        }
-
-        const workOrderPropertyId = stop.workOrder?.quote?.property?.id;
-
-        if (workOrderPropertyId) {
-          ids.add(workOrderPropertyId);
-        }
-      }
-    }
-
-    return ids;
-  }, [routes]);
-
-  const unassignedProperties = useMemo(
-    () =>
-      properties.filter((property) => !assignedPropertyIds.has(property.id)),
-    [assignedPropertyIds, properties]
-  );
-
   const selectedExistingCustomer = useMemo(
     () =>
       customers.find(
@@ -971,6 +950,11 @@ const AdminRoutesPage = () => {
   const existingCustomerProperties = useMemo(
     () => selectedExistingCustomer?.properties ?? [],
     [selectedExistingCustomer]
+  );
+
+  const selectedStopRoute = useMemo(
+    () => routes.find((route) => route.id === stopForm.routeId) ?? null,
+    [routes, stopForm.routeId]
   );
 
   const handleRouteChange = useCallback(
@@ -1063,7 +1047,7 @@ const AdminRoutesPage = () => {
             status: "draft",
           },
         });
-        toast.success("Route created");
+        toast.success("Staging route created");
         window.location.reload();
       } catch (error) {
         toast.error(
@@ -1078,87 +1062,34 @@ const AdminRoutesPage = () => {
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
 
+      if (!stopForm.routeId) {
+        toast.error("Choose a staging route first");
+        return;
+      }
+
+      if (!stopForm.workOrderId) {
+        toast.error("Choose a work order");
+        return;
+      }
+
       try {
         await addRouteStop({
           data: {
             routeId: stopForm.routeId,
-            sequence: Number(stopForm.sequence),
+            sequence: selectedStopRoute?.stops.length ?? 0,
             status: "pending",
             workOrderId: stopForm.workOrderId,
           },
         });
-        toast.success("Stop added to route");
+        toast.success("Work order queued for MRO");
         window.location.reload();
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "Failed to add route stop"
+          error instanceof Error ? error.message : "Failed to queue work order"
         );
       }
     },
-    [stopForm]
-  );
-
-  const handleBatchRouteChange = useCallback(
-    (event: ChangeEvent<HTMLSelectElement>) => {
-      setBatchPropertyForm((current) => ({
-        ...current,
-        routeId: event.target.value,
-      }));
-    },
-    []
-  );
-
-  const handleBatchPropertyChange = useCallback(
-    (event: ChangeEvent<HTMLSelectElement>) => {
-      const selectedIds = Array.from(
-        event.target.selectedOptions,
-        (option) => option.value
-      );
-
-      setBatchPropertyForm((current) => ({
-        ...current,
-        propertyIds: selectedIds,
-      }));
-    },
-    []
-  );
-
-  const handleBatchPropertyAdd = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-
-      if (!batchPropertyForm.routeId) {
-        toast.error("Choose a route first");
-        return;
-      }
-
-      if (batchPropertyForm.propertyIds.length === 0) {
-        toast.error("Select at least one property");
-        return;
-      }
-
-      try {
-        const result = await addPropertiesToRoute({
-          data: {
-            propertyIds: batchPropertyForm.propertyIds,
-            routeId: batchPropertyForm.routeId,
-          },
-        });
-
-        if (result.added === 0) {
-          toast.message("No new properties were added");
-        } else {
-          toast.success(`${String(result.added)} properties added to route`);
-        }
-
-        window.location.reload();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to add properties"
-        );
-      }
-    },
-    [batchPropertyForm.propertyIds, batchPropertyForm.routeId]
+    [selectedStopRoute?.stops.length, stopForm.routeId, stopForm.workOrderId]
   );
 
   const handleCreateCustomerSelectionChange = useCallback(
@@ -1249,7 +1180,7 @@ const AdminRoutesPage = () => {
 
         toast.success(
           createCustomerForm.routeId
-            ? "Client created and property added to route"
+            ? "Client created and address queued"
             : "Client created"
         );
         setCreateCustomerForm({
@@ -1378,7 +1309,7 @@ const AdminRoutesPage = () => {
             routeId: existingCustomerForm.routeId,
           },
         });
-        toast.success("Existing address added to route");
+        toast.success("Existing address queued");
         window.location.reload();
       } catch (error) {
         toast.error(
@@ -1440,7 +1371,7 @@ const AdminRoutesPage = () => {
 
         toast.success(
           existingCustomerForm.routeId
-            ? "Address created and added to route"
+            ? "Address created and queued"
             : "Address created"
         );
         window.location.reload();
@@ -1468,6 +1399,42 @@ const AdminRoutesPage = () => {
   return (
     <div className="stagger-children space-y-5">
       <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        <div className="grid gap-5 lg:grid-cols-[1fr_360px] lg:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+              MRO dispatch
+            </p>
+            <h1 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-black">
+              Queue stops here. Plan the route in MyRouteOnline.
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-black/50">
+              Fresh Mansions holds the customer, address, and work order. Send
+              the stop list to MyRouteOnline, import the finished order, then
+              dispatch the route to the assigned contractor.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-black/35">
+                Queued stops
+              </p>
+              <p className="mt-2 text-3xl font-bold tracking-[-0.04em] text-black">
+                {routeStats.queuedStops}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-black/35">
+                Ready routes
+              </p>
+              <p className="mt-2 text-3xl font-bold tracking-[-0.04em] text-black">
+                {routeStats.readyRoutes}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
         <div className="grid gap-5 lg:grid-cols-[1fr_420px] lg:items-end">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
@@ -1478,12 +1445,12 @@ const AdminRoutesPage = () => {
                 MyRouteOnline connection
               </p>
               <h2 className="mt-1 text-xl font-bold tracking-[-0.03em] text-black">
-                Route planner API key
+                Planner API key
               </h2>
               <p className="mt-1 text-sm text-black/45">
                 {mroSettings.hasApiKey
-                  ? "Configured from saved admin settings."
-                  : "Add the client's API key before sending production routes to MRO."}
+                  ? "Connected. New stop lists can be sent to MyRouteOnline."
+                  : "Add the MyRouteOnline API key before sending stop lists."}
               </p>
             </div>
           </div>
@@ -1527,11 +1494,14 @@ const AdminRoutesPage = () => {
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
-                  Route map
+                  Dispatch map
                 </p>
                 <h2 className="text-xl font-bold tracking-[-0.03em] text-black">
-                  Ordered stops and path geometry
+                  Imported stop order
                 </h2>
+                <p className="mt-1 text-sm text-black/45">
+                  The static view follows the order imported from MyRouteOnline.
+                </p>
               </div>
             </div>
             <select
@@ -1579,7 +1549,7 @@ const AdminRoutesPage = () => {
         </section>
       ) : null}
 
-      <section className="grid gap-5 xl:grid-cols-3">
+      <section className="grid gap-5 xl:grid-cols-2">
         <form
           className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]"
           onSubmit={handleCreateRoute}
@@ -1590,13 +1560,17 @@ const AdminRoutesPage = () => {
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
-                Route builder
+                MRO staging
               </p>
               <h3 className="text-lg font-bold tracking-[-0.03em] text-black">
-                Create a daily run
+                Create a staging route
               </h3>
             </div>
           </div>
+          <p className="mt-2 text-xs leading-relaxed text-black/40">
+            Start a route shell here, add the addresses that need service, then
+            let MyRouteOnline build the driving order.
+          </p>
           <div className="mt-5 grid gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Route name</Label>
@@ -1649,72 +1623,7 @@ const AdminRoutesPage = () => {
               className="h-11 rounded-full bg-black px-5 text-white hover:bg-black/90"
               type="submit"
             >
-              Create route
-            </Button>
-          </div>
-        </form>
-
-        <form
-          className="rounded-3xl border border-emerald-200 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]"
-          onSubmit={handleBatchPropertyAdd}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d6f18b]/30 text-[#0a1a10]">
-              <Plus className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
-                Direct assign
-              </p>
-              <h3 className="text-lg font-bold tracking-[-0.03em] text-black">
-                Batch add properties
-              </h3>
-            </div>
-          </div>
-          <p className="mt-2 text-xs leading-relaxed text-black/40">
-            Hold Command and click to select multiple properties.
-          </p>
-          <div className="mt-5 grid gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="batch-route-id">Route</Label>
-              <select
-                className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
-                id="batch-route-id"
-                onChange={handleBatchRouteChange}
-                value={batchPropertyForm.routeId}
-              >
-                <option value="">Choose route</option>
-                {routes.map((route) => (
-                  <option key={route.id} value={route.id}>
-                    {route.name} ({route.routeDate})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="batch-property-ids">
-                Properties ({unassignedProperties.length} unassigned)
-              </Label>
-              <select
-                className="min-h-[170px] w-full rounded-2xl border border-black/10 bg-white p-2 text-sm"
-                id="batch-property-ids"
-                multiple
-                onChange={handleBatchPropertyChange}
-                value={batchPropertyForm.propertyIds}
-              >
-                {unassignedProperties.map((property) => (
-                  <option key={property.id} value={property.id}>
-                    {property.customer?.user?.name ?? "Unknown"} -{" "}
-                    {property.fullAddress}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Button
-              className="h-11 rounded-full bg-emerald-700 px-5 text-white hover:bg-emerald-800"
-              type="submit"
-            >
-              Add selected properties
+              Create staging route
             </Button>
           </div>
         </form>
@@ -1729,16 +1638,20 @@ const AdminRoutesPage = () => {
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
-                Work order stop
+                Work order queue
               </p>
               <h3 className="text-lg font-bold tracking-[-0.03em] text-black">
-                Add from work orders
+                Queue a service stop
               </h3>
             </div>
           </div>
+          <p className="mt-2 text-xs leading-relaxed text-black/40">
+            Add accepted work to a staging route. MyRouteOnline will decide the
+            final stop order after import.
+          </p>
           <div className="mt-5 grid gap-4">
             <div className="space-y-2">
-              <Label htmlFor="routeId">Route</Label>
+              <Label htmlFor="routeId">Staging route</Label>
               <select
                 className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
                 id="routeId"
@@ -1772,22 +1685,11 @@ const AdminRoutesPage = () => {
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="sequence">Sequence</Label>
-              <Input
-                className="h-11 rounded-2xl border-black/10"
-                id="sequence"
-                name="sequence"
-                onChange={handleStopChange}
-                type="number"
-                value={stopForm.sequence}
-              />
-            </div>
             <Button
               className="h-11 rounded-full bg-black px-5 text-white hover:bg-black/90"
               type="submit"
             >
-              Add stop
+              Queue work order
             </Button>
           </div>
         </form>
@@ -1800,11 +1702,15 @@ const AdminRoutesPage = () => {
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
-              Inline customer
+              Address queue
             </p>
             <h3 className="text-lg font-bold tracking-[-0.03em] text-black">
-              Customer + address accordion
+              Add an address for MRO
             </h3>
+            <p className="mt-1 text-sm text-black/45">
+              Use this when a new address comes in by phone, text, or admin
+              backfill before it becomes a normal work order.
+            </p>
           </div>
         </div>
 
@@ -1815,7 +1721,7 @@ const AdminRoutesPage = () => {
             type="button"
           >
             <span className="text-sm font-semibold text-black">
-              Create customer + address
+              New customer address
             </span>
             {inlineCustomerMode === "create" ? (
               <ChevronUp className="h-4 w-4 text-black/40" />
@@ -1830,7 +1736,7 @@ const AdminRoutesPage = () => {
             type="button"
           >
             <span className="text-sm font-semibold text-black">
-              Select existing customer + address
+              Existing customer address
             </span>
             {inlineCustomerMode === "existing" ? (
               <ChevronUp className="h-4 w-4 text-black/40" />
@@ -1868,7 +1774,7 @@ const AdminRoutesPage = () => {
 
             <div className="space-y-2 lg:col-span-2">
               <Label htmlFor="inline-create-route-id">
-                Add property to route (optional)
+                Queue on staging route (optional)
               </Label>
               <select
                 className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
@@ -1877,7 +1783,7 @@ const AdminRoutesPage = () => {
                 onChange={handleCreateCustomerChange}
                 value={createCustomerForm.routeId}
               >
-                <option value="">Do not assign yet</option>
+                <option value="">Save address only</option>
                 {routes.map((route) => (
                   <option key={route.id} value={route.id}>
                     {route.name} ({route.routeDate})
@@ -1911,7 +1817,7 @@ const AdminRoutesPage = () => {
               >
                 {isSavingCustomer
                   ? "Creating client..."
-                  : "Create client and optional stop"}
+                  : "Create client and queue address"}
               </Button>
             </div>
           </form>
@@ -1941,7 +1847,7 @@ const AdminRoutesPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="inline-existing-route-id">Route</Label>
+                <Label htmlFor="inline-existing-route-id">Staging route</Label>
                 <select
                   className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
                   id="inline-existing-route-id"
@@ -1984,8 +1890,8 @@ const AdminRoutesPage = () => {
                 type="submit"
               >
                 {isSavingExistingPropertySelection
-                  ? "Adding existing address..."
-                  : "Add existing address to route"}
+                  ? "Queueing address..."
+                  : "Queue existing address"}
               </Button>
             </form>
 
@@ -2036,9 +1942,9 @@ const AdminRoutesPage = () => {
 
       {routes.length === 0 ? (
         <EmptyState
-          description="Create your first route above and start adding stops to build daily runs for your crews."
+          description="Create a staging route, queue the addresses that need service, then send the stop list to MyRouteOnline."
           illustration="leaf"
-          title="No routes yet"
+          title="No staging routes yet"
         />
       ) : (
         <section className="grid gap-5">
@@ -2064,7 +1970,6 @@ export const Route = createFileRoute("/admin/routes/")({
     contractors: await listContractors(),
     customers: await listCustomers(),
     mroSettings: await getMyRouteOnlineSettings(),
-    properties: await listProperties(),
     routes: await listRoutes(),
     workOrders: await listWorkOrders(),
   }),

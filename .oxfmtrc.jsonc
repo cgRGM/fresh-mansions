@@ -12,6 +12,7 @@
     "order": "asc",
   },
   "experimentalSortPackageJson": true,
+  "ignorePatterns": ["apps/web/src/routeTree.gen.ts"],
   "jsxSingleQuote": false,
   "printWidth": 80,
   "quoteProps": "as-needed",
