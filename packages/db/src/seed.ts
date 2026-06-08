@@ -1,5 +1,6 @@
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 
+import { buildNormalizedAddressKey } from "./address-dedupe";
 import {
   contractor,
   customer,
@@ -39,6 +40,12 @@ export const seed = async (db: DrizzleD1Database<Record<string, unknown>>) => {
       customerId: customer1Id,
       id: prop1Id,
       nickname: "Home",
+      normalizedAddressKey: buildNormalizedAddressKey({
+        city: "Harrisonburg",
+        state: "VA",
+        street: "123 Main St",
+        zip: "22801",
+      }),
       state: "VA",
       street: "123 Main St",
       zip: "22801",
@@ -48,6 +55,12 @@ export const seed = async (db: DrizzleD1Database<Record<string, unknown>>) => {
       customerId: customer1Id,
       id: prop2Id,
       nickname: "Office",
+      normalizedAddressKey: buildNormalizedAddressKey({
+        city: "Harrisonburg",
+        state: "VA",
+        street: "456 Liberty St",
+        zip: "22802",
+      }),
       state: "VA",
       street: "456 Liberty St",
       zip: "22802",
@@ -57,6 +70,12 @@ export const seed = async (db: DrizzleD1Database<Record<string, unknown>>) => {
       customerId: customer2Id,
       id: prop3Id,
       nickname: "Primary Residence",
+      normalizedAddressKey: buildNormalizedAddressKey({
+        city: "Staunton",
+        state: "VA",
+        street: "789 Augusta Ave",
+        zip: "24401",
+      }),
       state: "VA",
       street: "789 Augusta Ave",
       zip: "24401",

@@ -1,0 +1,11 @@
+ALTER TABLE `route` ADD `mro_app_navigation_url` text;
+ALTER TABLE `route` ADD `mro_error` text;
+ALTER TABLE `route` ADD `mro_job_token` text;
+ALTER TABLE `route` ADD `mro_print_and_directions_url` text;
+ALTER TABLE `route` ADD `mro_response` text;
+ALTER TABLE `route` ADD `mro_status` text DEFAULT 'not_submitted' NOT NULL;
+ALTER TABLE `route` ADD `mro_submitted_at` integer;
+ALTER TABLE `route` ADD `mro_synced_at` integer;
+ALTER TABLE `route_stop` ADD `mro_full_address` text;
+ALTER TABLE `route_stop` ADD `mro_stop_address_id` integer;
+ALTER TABLE `route_stop` ADD `mro_stop_number` integer;

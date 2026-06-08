@@ -24,6 +24,8 @@ export const env = {
   BETTER_AUTH_URL: getEnvValue("BETTER_AUTH_URL") ?? "http://localhost:3000",
   CORS_ORIGIN: getEnvValue("CORS_ORIGIN") ?? "http://localhost:3001",
   DB: mockDb,
+  MYROUTEONLINE_API_KEY: getEnvValue("MYROUTEONLINE_API_KEY"),
+  MYROUTEONLINE_START_ADDRESS: getEnvValue("MYROUTEONLINE_START_ADDRESS"),
   RADAR_SECRET_KEY: getEnvValue("RADAR_SECRET_KEY"),
   STORAGE: mockStorage,
   STRIPE_SECRET_KEY: getEnvValue("STRIPE_SECRET_KEY"),

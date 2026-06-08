@@ -1,6 +1,7 @@
 import { hashPassword } from "@fresh-mansions/auth/password";
 import { db } from "@fresh-mansions/db";
 import { buildFullAddress } from "@fresh-mansions/db/address";
+import { buildNormalizedAddressKey } from "@fresh-mansions/db/address-dedupe";
 import { account, user } from "@fresh-mansions/db/schema/auth";
 import {
   contractor,
@@ -24,7 +25,7 @@ import {
   workOrderAssignmentSchema,
 } from "@fresh-mansions/db/validators";
 import { env } from "@fresh-mansions/env/server";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { createApp } from "../lib/hono";
@@ -339,15 +340,42 @@ app.post("/customers", async (c) => {
   let propertyId: null | string = null;
 
   if (body.street && body.city && body.state && body.zip) {
-    propertyId = crypto.randomUUID();
-    const fullAddress = buildFullAddress({
+    const addressInput = {
       addressLine2: body.addressLine2,
       city: body.city,
       formattedAddress: body.fullAddress || body.formattedAddress,
       state: body.state,
       street: body.street,
       zip: body.zip,
+    };
+    const fullAddress = buildFullAddress(addressInput);
+    const normalizedAddressKey = buildNormalizedAddressKey(addressInput);
+    const existingProperty = await db.query.property.findFirst({
+      where: body.radarPlaceId
+        ? or(
+            eq(property.radarPlaceId, body.radarPlaceId),
+            eq(property.normalizedAddressKey, normalizedAddressKey)
+          )
+        : eq(property.normalizedAddressKey, normalizedAddressKey),
+      with: {
+        customer: {
+          with: {
+            user: true,
+          },
+        },
+      },
     });
+
+    if (existingProperty) {
+      return c.json(
+        {
+          error: `That address already belongs to ${existingProperty.customer?.user?.name ?? "another customer"}`,
+        },
+        409
+      );
+    }
+
+    propertyId = crypto.randomUUID();
 
     await db.insert(property).values({
       addressLine2: body.addressLine2 ?? null,
@@ -359,6 +387,7 @@ app.post("/customers", async (c) => {
       latitude: body.latitude ?? null,
       longitude: body.longitude ?? null,
       nickname: body.nickname ?? null,
+      normalizedAddressKey,
       radarMetadata: body.radarMetadata ?? null,
       radarPlaceId: body.radarPlaceId ?? null,
       state: body.state,
@@ -606,6 +635,15 @@ app.get("/routes", async (c) => {
       contractor: true,
       stops: {
         with: {
+          property: {
+            with: {
+              customer: {
+                with: {
+                  user: true,
+                },
+              },
+            },
+          },
           workOrder: {
             with: {
               contractor: true,

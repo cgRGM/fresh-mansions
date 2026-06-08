@@ -1,5 +1,6 @@
 import { db } from "@fresh-mansions/db";
 import { buildFullAddress } from "@fresh-mansions/db/address";
+import { buildNormalizedAddressKey } from "@fresh-mansions/db/address-dedupe";
 import {
   customer,
   property,
@@ -10,7 +11,7 @@ import {
 import type { UserRole } from "@fresh-mansions/db/validators";
 import { quoteIntakeSchema } from "@fresh-mansions/db/validators";
 import { env } from "@fresh-mansions/env/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { createApp, requireSession } from "../lib/hono";
@@ -155,32 +156,54 @@ app.post("/", async (c) => {
     fullAddress =
       buildFullAddress(existingProperty) || existingProperty.formattedAddress;
   } else {
-    propertyId = crypto.randomUUID();
-    fullAddress = buildFullAddress({
+    const addressInput = {
       addressLine2: body.addressLine2,
       city: body.city,
       formattedAddress: body.fullAddress || body.formattedAddress,
       state: body.state,
       street: body.street,
       zip: body.zip,
+    };
+    fullAddress = buildFullAddress(addressInput);
+    const normalizedAddressKey = buildNormalizedAddressKey(addressInput);
+    const existingProperty = await db.query.property.findFirst({
+      where: body.radarPlaceId
+        ? or(
+            eq(property.radarPlaceId, body.radarPlaceId),
+            eq(property.normalizedAddressKey, normalizedAddressKey)
+          )
+        : eq(property.normalizedAddressKey, normalizedAddressKey),
     });
 
-    await db.insert(property).values({
-      addressLine2: body.addressLine2 ?? null,
-      addressValidationStatus: body.validationStatus,
-      city: body.city,
-      customerId,
-      formattedAddress: fullAddress || body.formattedAddress || null,
-      id: propertyId,
-      latitude: body.latitude,
-      longitude: body.longitude,
-      nickname: body.nickname ?? null,
-      radarMetadata: body.radarMetadata ?? null,
-      radarPlaceId: body.radarPlaceId ?? null,
-      state: body.state,
-      street: body.street,
-      zip: body.zip,
-    });
+    if (existingProperty) {
+      if (existingProperty.customerId !== customerId) {
+        return c.json({ error: "Address is already on file" }, 409);
+      }
+
+      propertyId = existingProperty.id;
+      fullAddress =
+        buildFullAddress(existingProperty) || existingProperty.formattedAddress;
+    } else {
+      propertyId = crypto.randomUUID();
+
+      await db.insert(property).values({
+        addressLine2: body.addressLine2 ?? null,
+        addressValidationStatus: body.validationStatus,
+        city: body.city,
+        customerId,
+        formattedAddress: fullAddress || body.formattedAddress || null,
+        id: propertyId,
+        latitude: body.latitude,
+        longitude: body.longitude,
+        nickname: body.nickname ?? null,
+        normalizedAddressKey,
+        radarMetadata: body.radarMetadata ?? null,
+        radarPlaceId: body.radarPlaceId ?? null,
+        state: body.state,
+        street: body.street,
+        zip: body.zip,
+      });
+    }
   }
 
   const quoteId = crypto.randomUUID();

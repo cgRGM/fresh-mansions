@@ -3,7 +3,14 @@
 import { Badge } from "@fresh-mansions/ui/components/badge";
 import { Button } from "@fresh-mansions/ui/components/button";
 import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router";
-import { ArrowLeft, CheckCircle, MapPin, User, Wrench } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle,
+  MapPin,
+  Navigation,
+  User,
+  Wrench,
+} from "lucide-react";
 import { useCallback } from "react";
 import { toast } from "sonner";
 
@@ -20,6 +27,26 @@ const statusColors: Record<string, string> = {
 };
 
 const routeApi = getRouteApi("/contractor/stops/$stopId");
+
+const getMapsUrl = ({
+  address,
+  latitude,
+  longitude,
+}: {
+  address: string;
+  latitude?: null | number;
+  longitude?: null | number;
+}): string => {
+  if (typeof latitude === "number" && typeof longitude === "number") {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      `${String(latitude)},${String(longitude)}`
+    )}`;
+  }
+
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    address
+  )}`;
+};
 
 const StopDetail = () => {
   const stop = routeApi.useLoaderData();
@@ -67,9 +94,17 @@ const StopDetail = () => {
     );
   }
 
+  const property = stop.property ?? stop.workOrder?.quote?.property ?? null;
   const customerName =
-    stop.workOrder?.quote?.customer?.user?.name ?? "Unknown client";
-  const address = getPropertyDisplayAddress(stop.workOrder?.quote?.property);
+    stop.property?.customer?.user?.name ??
+    stop.workOrder?.quote?.customer?.user?.name ??
+    "Unknown client";
+  const address = getPropertyDisplayAddress(property);
+  const mapsUrl = getMapsUrl({
+    address,
+    latitude: property?.latitude,
+    longitude: property?.longitude,
+  });
   const serviceType = stop.workOrder?.quote?.serviceType;
   const isCompleted = stop.status === "completed";
 
@@ -135,6 +170,15 @@ const StopDetail = () => {
                 <p className="text-sm font-semibold text-black">{address}</p>
               </div>
             </div>
+            <a
+              className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl border border-black/10 px-3 text-sm font-medium text-black transition hover:bg-black/5"
+              href={mapsUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <Navigation className="h-4 w-4" />
+              Open in maps
+            </a>
           </section>
 
           {serviceType ? (
@@ -203,6 +247,15 @@ const StopDetail = () => {
               <CheckCircle className="h-4 w-4" />
               Mark Complete
             </Button>
+            <a
+              className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-black/10 px-4 text-sm font-medium text-black transition hover:bg-black/5 sm:ml-3 sm:mt-0 sm:w-auto"
+              href={mapsUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <Navigation className="h-4 w-4" />
+              Open in maps
+            </a>
           </section>
         )}
       </div>

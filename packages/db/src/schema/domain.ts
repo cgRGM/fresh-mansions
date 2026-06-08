@@ -49,6 +49,7 @@ export const property = sqliteTable(
     latitude: real("latitude"),
     longitude: real("longitude"),
     nickname: text("nickname"),
+    normalizedAddressKey: text("normalized_address_key"),
     radarMetadata: text("radar_metadata", { mode: "json" }),
     radarPlaceId: text("radar_place_id"),
     state: text("state").notNull(),
@@ -59,7 +60,10 @@ export const property = sqliteTable(
       .notNull(),
     zip: text("zip").notNull(),
   },
-  (table) => [index("property_customerId_idx").on(table.customerId)]
+  (table) => [
+    index("property_customerId_idx").on(table.customerId),
+    index("property_normalizedAddressKey_idx").on(table.normalizedAddressKey),
+  ]
 );
 
 export const quote = sqliteTable(
@@ -185,6 +189,14 @@ export const route = sqliteTable(
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
     id: text("id").primaryKey(),
+    mroAppNavigationUrl: text("mro_app_navigation_url"),
+    mroError: text("mro_error"),
+    mroJobToken: text("mro_job_token"),
+    mroPrintAndDirectionsUrl: text("mro_print_and_directions_url"),
+    mroResponse: text("mro_response", { mode: "json" }),
+    mroStatus: text("mro_status").notNull().default("not_submitted"),
+    mroSubmittedAt: integer("mro_submitted_at", { mode: "timestamp_ms" }),
+    mroSyncedAt: integer("mro_synced_at", { mode: "timestamp_ms" }),
     name: text("name").notNull(),
     routeDate: text("route_date").notNull(),
     status: text("status").notNull().default("draft"),
@@ -206,6 +218,9 @@ export const routeStop = sqliteTable(
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),
     id: text("id").primaryKey(),
+    mroFullAddress: text("mro_full_address"),
+    mroStopAddressId: integer("mro_stop_address_id"),
+    mroStopNumber: integer("mro_stop_number"),
     notes: text("notes"),
     propertyId: text("property_id").references(() => property.id, {
       onDelete: "set null",
@@ -240,6 +255,15 @@ export const service = sqliteTable("service", {
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .$onUpdate(() => new Date())
     .notNull(),
+});
+
+export const appSetting = sqliteTable("app_setting", {
+  key: text("key").primaryKey(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+    .$onUpdate(() => new Date())
+    .notNull(),
+  value: text("value"),
 });
 
 export const invoice = sqliteTable(

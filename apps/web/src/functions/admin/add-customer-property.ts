@@ -1,8 +1,9 @@
 import { db } from "@fresh-mansions/db";
 import { buildFullAddress } from "@fresh-mansions/db/address";
+import { buildNormalizedAddressKey } from "@fresh-mansions/db/address-dedupe";
 import { customer, property } from "@fresh-mansions/db/schema/domain";
 import { createServerFn } from "@tanstack/react-start";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { authMiddleware } from "@/middleware/auth";
@@ -37,14 +38,41 @@ export const addCustomerProperty = createServerFn({ method: "POST" })
     }
 
     const propertyId = crypto.randomUUID();
-    const fullAddress = buildFullAddress({
+    const addressInput = {
       addressLine2: data.addressLine2,
       city: data.city,
       formattedAddress: data.formattedAddress,
       state: data.state,
       street: data.street,
       zip: data.zip,
+    };
+    const fullAddress = buildFullAddress(addressInput);
+    const normalizedAddressKey = buildNormalizedAddressKey(addressInput);
+    const existingProperty = await db.query.property.findFirst({
+      where: data.radarPlaceId
+        ? or(
+            eq(property.radarPlaceId, data.radarPlaceId),
+            eq(property.normalizedAddressKey, normalizedAddressKey)
+          )
+        : eq(property.normalizedAddressKey, normalizedAddressKey),
+      with: {
+        customer: {
+          with: {
+            user: true,
+          },
+        },
+      },
     });
+
+    if (existingProperty) {
+      if (existingProperty.customerId === data.customerId) {
+        return { duplicate: true, propertyId: existingProperty.id };
+      }
+
+      throw new Error(
+        `That address already belongs to ${existingProperty.customer?.user?.name ?? "another customer"}`
+      );
+    }
 
     await db.insert(property).values({
       addressLine2: data.addressLine2?.trim() || null,
@@ -56,6 +84,7 @@ export const addCustomerProperty = createServerFn({ method: "POST" })
       latitude: data.latitude ?? null,
       longitude: data.longitude ?? null,
       nickname: data.nickname?.trim() || null,
+      normalizedAddressKey,
       radarMetadata: data.radarMetadata ?? null,
       radarPlaceId: data.radarPlaceId ?? null,
       state: data.state,

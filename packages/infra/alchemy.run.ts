@@ -49,6 +49,9 @@ const viteServerUrl = requireBinding(
 const radarSecretKey = process.env.RADAR_SECRET_KEY
   ? alchemy.secret(process.env.RADAR_SECRET_KEY, "RADAR_SECRET_KEY")
   : undefined;
+const myRouteOnlineApiKey = process.env.MYROUTEONLINE_API_KEY
+  ? alchemy.secret(process.env.MYROUTEONLINE_API_KEY, "MYROUTEONLINE_API_KEY")
+  : undefined;
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY
   ? alchemy.secret(process.env.STRIPE_SECRET_KEY, "STRIPE_SECRET_KEY")
   : undefined;
@@ -59,6 +62,7 @@ const turnstileSecretKey = process.env.TURNSTILE_SECRET_KEY
   ? alchemy.secret(process.env.TURNSTILE_SECRET_KEY, "TURNSTILE_SECRET_KEY")
   : undefined;
 const radarPublishableKey = process.env.VITE_RADAR_PUBLISHABLE_KEY;
+const myRouteOnlineStartAddress = process.env.MYROUTEONLINE_START_ADDRESS;
 const superUserEmails = process.env.SUPER_USER_EMAILS;
 const turnstileSiteKey = process.env.VITE_TURNSTILE_SITE_KEY;
 
@@ -81,6 +85,12 @@ const webBindings = {
   DB: db,
   STORAGE: storage,
   VITE_SERVER_URL: viteServerUrl,
+  ...(myRouteOnlineApiKey
+    ? { MYROUTEONLINE_API_KEY: myRouteOnlineApiKey }
+    : {}),
+  ...(myRouteOnlineStartAddress
+    ? { MYROUTEONLINE_START_ADDRESS: myRouteOnlineStartAddress }
+    : {}),
   ...(radarSecretKey ? { RADAR_SECRET_KEY: radarSecretKey } : {}),
   ...(radarPublishableKey
     ? { VITE_RADAR_PUBLISHABLE_KEY: radarPublishableKey }
@@ -100,6 +110,12 @@ const serverBindings = {
   CORS_ORIGIN: corsOrigin,
   DB: db,
   STORAGE: storage,
+  ...(myRouteOnlineApiKey
+    ? { MYROUTEONLINE_API_KEY: myRouteOnlineApiKey }
+    : {}),
+  ...(myRouteOnlineStartAddress
+    ? { MYROUTEONLINE_START_ADDRESS: myRouteOnlineStartAddress }
+    : {}),
   ...(superUserEmails ? { SUPER_USER_EMAILS: superUserEmails } : {}),
   ...(radarSecretKey ? { RADAR_SECRET_KEY: radarSecretKey } : {}),
   ...(stripeSecretKey ? { STRIPE_SECRET_KEY: stripeSecretKey } : {}),
