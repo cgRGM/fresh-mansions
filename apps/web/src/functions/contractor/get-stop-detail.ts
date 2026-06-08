@@ -16,6 +16,15 @@ export const getStopDetail = createServerFn({ method: "GET" })
     const stop = await db.query.routeStop.findFirst({
       where: eq(routeStop.id, data.stopId),
       with: {
+        property: {
+          with: {
+            customer: {
+              with: {
+                user: true,
+              },
+            },
+          },
+        },
         route: true,
         workOrder: {
           with: {

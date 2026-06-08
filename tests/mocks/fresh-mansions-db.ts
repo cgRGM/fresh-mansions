@@ -4,6 +4,7 @@ import { vi } from "vitest";
 interface MockDb {
   insert: Mock;
   query: {
+    appSetting: { findFirst: Mock; findMany: Mock };
     contractor: { findFirst: Mock; findMany: Mock };
     customer: { findFirst: Mock; findMany: Mock };
     invoice: { findFirst: Mock; findMany: Mock };
@@ -26,6 +27,7 @@ const createQueryModel = () => ({
 const createMockDb = (): MockDb => ({
   insert: vi.fn(),
   query: {
+    appSetting: createQueryModel(),
     contractor: createQueryModel(),
     customer: createQueryModel(),
     invoice: createQueryModel(),

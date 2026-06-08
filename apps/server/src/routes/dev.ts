@@ -1,4 +1,5 @@
 import { db } from "@fresh-mansions/db";
+import { buildNormalizedAddressKey } from "@fresh-mansions/db/address-dedupe";
 import { customer, property, quote } from "@fresh-mansions/db/schema/domain";
 import * as Sentry from "@sentry/cloudflare";
 import { eq } from "drizzle-orm";
@@ -61,6 +62,12 @@ app.post("/seed", async (c) => {
       customerId,
       id: prop1Id,
       nickname: "Home",
+      normalizedAddressKey: buildNormalizedAddressKey({
+        city: "Harrisonburg",
+        state: "VA",
+        street: "123 Oak Street",
+        zip: "22801",
+      }),
       state: "VA",
       street: "123 Oak Street",
       zip: "22801",
@@ -70,6 +77,12 @@ app.post("/seed", async (c) => {
       customerId,
       id: prop2Id,
       nickname: "Office",
+      normalizedAddressKey: buildNormalizedAddressKey({
+        city: "Harrisonburg",
+        state: "VA",
+        street: "456 Maple Avenue",
+        zip: "22802",
+      }),
       state: "VA",
       street: "456 Maple Avenue",
       zip: "22802",

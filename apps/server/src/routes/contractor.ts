@@ -38,6 +38,15 @@ app.get("/me/route", async (c) => {
           stops: {
             orderBy: (table, { asc }) => [asc(table.sequence)],
             with: {
+              property: {
+                with: {
+                  customer: {
+                    with: {
+                      user: true,
+                    },
+                  },
+                },
+              },
               workOrder: {
                 with: {
                   quote: {
@@ -179,6 +188,11 @@ app.get("/me/routes", async (c) => {
       stops: {
         orderBy: (table, { asc }) => [asc(table.sequence)],
         with: {
+          property: {
+            with: {
+              customer: { with: { user: true } },
+            },
+          },
           workOrder: {
             with: {
               quote: {

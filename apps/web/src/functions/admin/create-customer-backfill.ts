@@ -1,11 +1,12 @@
 import { hashPassword } from "@fresh-mansions/auth/password";
 import { db } from "@fresh-mansions/db";
 import { buildFullAddress } from "@fresh-mansions/db/address";
+import { buildNormalizedAddressKey } from "@fresh-mansions/db/address-dedupe";
 import { account, user } from "@fresh-mansions/db/schema/auth";
 import { customer, property } from "@fresh-mansions/db/schema/domain";
 import { customerBackfillSchema } from "@fresh-mansions/db/validators";
 import { createServerFn } from "@tanstack/react-start";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 
 import { authMiddleware } from "@/middleware/auth";
 import { requireRoleMiddleware } from "@/middleware/roles";
@@ -57,15 +58,39 @@ export const createCustomerBackfill = createServerFn({ method: "POST" })
     let propertyId: null | string = null;
 
     if (data.street && data.city && data.state && data.zip) {
-      propertyId = crypto.randomUUID();
-      const fullAddress = buildFullAddress({
+      const addressInput = {
         addressLine2: data.addressLine2,
         city: data.city,
         formattedAddress: data.fullAddress || data.formattedAddress,
         state: data.state,
         street: data.street,
         zip: data.zip,
+      };
+      const fullAddress = buildFullAddress(addressInput);
+      const normalizedAddressKey = buildNormalizedAddressKey(addressInput);
+      const existingProperty = await db.query.property.findFirst({
+        where: data.radarPlaceId
+          ? or(
+              eq(property.radarPlaceId, data.radarPlaceId),
+              eq(property.normalizedAddressKey, normalizedAddressKey)
+            )
+          : eq(property.normalizedAddressKey, normalizedAddressKey),
+        with: {
+          customer: {
+            with: {
+              user: true,
+            },
+          },
+        },
       });
+
+      if (existingProperty) {
+        throw new Error(
+          `That address already belongs to ${existingProperty.customer?.user?.name ?? "another customer"}`
+        );
+      }
+
+      propertyId = crypto.randomUUID();
 
       await db.insert(property).values({
         addressLine2: data.addressLine2 || null,
@@ -77,6 +102,7 @@ export const createCustomerBackfill = createServerFn({ method: "POST" })
         latitude: data.latitude ?? null,
         longitude: data.longitude ?? null,
         nickname: data.nickname || null,
+        normalizedAddressKey,
         radarMetadata: data.radarMetadata ?? null,
         radarPlaceId: data.radarPlaceId ?? null,
         state: data.state,

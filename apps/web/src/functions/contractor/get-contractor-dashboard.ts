@@ -40,6 +40,11 @@ export const getContractorDashboard = createServerFn({ method: "GET" })
             stops: {
               orderBy: (table, { asc }) => [asc(table.sequence)],
               with: {
+                property: {
+                  with: {
+                    customer: { with: { user: true } },
+                  },
+                },
                 workOrder: {
                   with: {
                     quote: {

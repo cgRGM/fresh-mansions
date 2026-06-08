@@ -37,3 +37,18 @@ export const createUpdateChain = <T>(result?: T) => {
     where,
   };
 };
+
+export const createUpdateReturningChain = <T>(result: T) => {
+  const returning = vi.fn().mockResolvedValue(result);
+  const where = vi.fn().mockReturnValue({ returning });
+  const set = vi.fn().mockReturnValue({ where });
+
+  return {
+    chain: {
+      set,
+    },
+    returning,
+    set,
+    where,
+  };
+};

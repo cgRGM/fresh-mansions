@@ -8,10 +8,13 @@ import {
   ArrowUp,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
+  KeyRound,
   LayoutDashboard,
   MapPin,
   Plus,
-  Sparkles,
+  RefreshCcw,
+  Send,
 } from "lucide-react";
 import type { ChangeEvent, FormEvent, MouseEvent } from "react";
 import { useCallback, useMemo, useState } from "react";
@@ -27,16 +30,20 @@ import { addCustomerProperty } from "@/functions/admin/add-customer-property";
 import { addPropertiesToRoute } from "@/functions/admin/add-properties-to-route";
 import { addPropertyToRoute } from "@/functions/admin/add-property-to-route";
 import { addRouteStop } from "@/functions/admin/add-route-stop";
+import { checkAddressDuplicate } from "@/functions/admin/check-address-duplicate";
 import { createCustomerBackfill } from "@/functions/admin/create-customer-backfill";
 import { createRouteRecord } from "@/functions/admin/create-route";
+import { getMyRouteOnlineSettings } from "@/functions/admin/get-myrouteonline-settings";
 import { listContractors } from "@/functions/admin/list-contractors";
 import { listCustomers } from "@/functions/admin/list-customers";
 import { listProperties } from "@/functions/admin/list-properties";
 import { listRoutes } from "@/functions/admin/list-routes";
 import { listWorkOrders } from "@/functions/admin/list-work-orders";
-import { optimizeRouteStops } from "@/functions/admin/optimize-route-stops";
 import { reassignRoute } from "@/functions/admin/reassign-route";
 import { reorderRouteStops } from "@/functions/admin/reorder-route-stops";
+import { submitRouteToMyRouteOnline } from "@/functions/admin/submit-route-to-myrouteonline";
+import { syncMyRouteOnlineRoute } from "@/functions/admin/sync-myrouteonline-route";
+import { updateMyRouteOnlineSettings } from "@/functions/admin/update-myrouteonline-settings";
 import { getPropertyDisplayAddress } from "@/lib/address";
 
 const adminRoutesRouteApi = getRouteApi("/admin/routes/");
@@ -49,6 +56,7 @@ type RouteRecord = Awaited<ReturnType<typeof listRoutes>>[number];
 interface AdminRoutesLoaderData {
   contractors: Awaited<ReturnType<typeof listContractors>>;
   customers: Awaited<ReturnType<typeof listCustomers>>;
+  mroSettings: Awaited<ReturnType<typeof getMyRouteOnlineSettings>>;
   properties: Awaited<ReturnType<typeof listProperties>>;
   routes: Awaited<ReturnType<typeof listRoutes>>;
   workOrders: Awaited<ReturnType<typeof listWorkOrders>>;
@@ -66,7 +74,7 @@ const ROUTE_COLORS = [
 ] as const;
 
 const [DEFAULT_ROUTE_COLOR] = ROUTE_COLORS;
-const MAX_OPTIMIZABLE_STOPS = 10;
+const MIN_MRO_ROUTE_STOPS = 3;
 
 interface RouteMapMarker {
   color: string;
@@ -76,6 +84,9 @@ interface RouteMapMarker {
 }
 
 type RouteMapPath = StaticMapPath & { routeId: string };
+type AddressDuplicateResult = Awaited<
+  ReturnType<typeof checkAddressDuplicate>
+>["duplicate"];
 
 const toRadarColor = (value: string): string => {
   if (/^0x[0-9a-fA-F]{6}$/.test(value)) {
@@ -111,6 +122,22 @@ const getStopStatusBadgeClass = (status: string): string => {
   return "bg-black/8 text-black/60";
 };
 
+const getMroStatusBadgeClass = (status: null | string | undefined): string => {
+  if (status === "finished") {
+    return "bg-emerald-100 text-emerald-700";
+  }
+
+  if (status === "processing") {
+    return "bg-blue-100 text-blue-700";
+  }
+
+  if (status === "failed") {
+    return "bg-red-100 text-red-700";
+  }
+
+  return "bg-black/8 text-black/60";
+};
+
 const StopDirectBadge = ({
   isDirectProperty,
 }: {
@@ -121,6 +148,27 @@ const StopDirectBadge = ({
   }
 
   return <Badge className="bg-[#d6f18b] text-[#0a1a10]">Direct</Badge>;
+};
+
+const AddressDuplicateNotice = ({
+  duplicate,
+}: {
+  readonly duplicate: AddressDuplicateResult;
+}) => {
+  if (!duplicate) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
+      {duplicate.isSameCustomer
+        ? "This customer already has this address on file."
+        : `This address already belongs to ${duplicate.customerName ?? "another customer"}.`}
+      <span className="block text-amber-700/80">
+        {duplicate.formattedAddress}
+      </span>
+    </div>
+  );
 };
 
 const StopCoordinates = ({
@@ -170,7 +218,7 @@ const RouteStopItem = ({
         <div>
           <div className="flex items-center gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
-              Stop {stop.sequence + 1}
+              Stop {stop.mroStopNumber ?? stop.sequence + 1}
             </p>
             <StopDirectBadge isDirectProperty={isDirectProperty} />
           </div>
@@ -276,9 +324,10 @@ const RouteCard = ({
   route,
   routeColor,
 }: RouteCardProps) => {
-  const [isOptimizing, setIsOptimizing] = useState(false);
   const [isSavingReassignment, setIsSavingReassignment] = useState(false);
   const [isSavingReorder, setIsSavingReorder] = useState(false);
+  const [isSubmittingMro, setIsSubmittingMro] = useState(false);
+  const [isSyncingMro, setIsSyncingMro] = useState(false);
   const [reassignmentForm, setReassignmentForm] = useState({
     color: toRadarColor(routeColor),
     contractorId: route.contractorId ?? "",
@@ -335,10 +384,7 @@ const RouteCard = ({
     ];
   }, [route.id, routeColor, stopCoordinates]);
 
-  const canOptimize =
-    route.stops.length >= 3 &&
-    route.stops.length <= MAX_OPTIMIZABLE_STOPS &&
-    stopCoordinates.length === route.stops.length;
+  const canSendToMro = route.stops.length >= MIN_MRO_ROUTE_STOPS;
 
   const handleCardToggle = useCallback(() => {
     onToggle(route.id);
@@ -451,23 +497,56 @@ const RouteCard = ({
     [route.id, route.stops]
   );
 
-  const handleOptimize = useCallback(async () => {
-    setIsOptimizing(true);
+  const handleSubmitToMro = useCallback(async () => {
+    setIsSubmittingMro(true);
 
     try {
-      await optimizeRouteStops({
+      await submitRouteToMyRouteOnline({
         data: {
           routeId: route.id,
         },
       });
-      toast.success("Route stop order optimized");
+      toast.success("Route sent to MyRouteOnline");
       window.location.reload();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to optimize route"
+        error instanceof Error
+          ? error.message
+          : "Failed to send route to MyRouteOnline"
       );
     } finally {
-      setIsOptimizing(false);
+      setIsSubmittingMro(false);
+    }
+  }, [route.id]);
+
+  const handleSyncFromMro = useCallback(async () => {
+    setIsSyncingMro(true);
+
+    try {
+      const result = await syncMyRouteOnlineRoute({
+        data: {
+          routeId: route.id,
+        },
+      });
+
+      if (result.isFinished) {
+        toast.success("MyRouteOnline route imported");
+        window.location.reload();
+      } else {
+        toast.message(
+          `MyRouteOnline is still processing${
+            result.progress === null ? "" : `: ${String(result.progress)}%`
+          }`
+        );
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to import MyRouteOnline route"
+      );
+    } finally {
+      setIsSyncingMro(false);
     }
   }, [route.id]);
 
@@ -526,6 +605,9 @@ const RouteCard = ({
         <div className="flex items-center gap-3">
           <Badge className="bg-black text-white">
             {route.stops.length} stops
+          </Badge>
+          <Badge className={getMroStatusBadgeClass(route.mroStatus)}>
+            MRO: {(route.mroStatus ?? "not_submitted").replaceAll("_", " ")}
           </Badge>
           {expanded ? (
             <ChevronUp className="h-4 w-4 text-black/30" />
@@ -587,21 +669,61 @@ const RouteCard = ({
               </Button>
               <Button
                 className="h-10 rounded-full border-black/20"
-                disabled={isOptimizing || isSavingReorder || !canOptimize}
-                onClick={handleOptimize}
+                disabled={isSubmittingMro || !canSendToMro}
+                onClick={handleSubmitToMro}
                 type="button"
                 variant="outline"
               >
-                <Sparkles className="mr-2 h-4 w-4" />
-                {isOptimizing ? "Optimizing..." : "Optimize order"}
+                <Send className="mr-2 h-4 w-4" />
+                {isSubmittingMro ? "Sending..." : "Send to MRO"}
               </Button>
-              {canOptimize ? null : (
+              <Button
+                className="h-10 rounded-full border-black/20"
+                disabled={isSyncingMro || !route.mroJobToken}
+                onClick={handleSyncFromMro}
+                type="button"
+                variant="outline"
+              >
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                {isSyncingMro ? "Importing..." : "Import MRO route"}
+              </Button>
+              {canSendToMro ? null : (
                 <p className="self-center text-xs text-black/40">
-                  Optimization requires 3-{MAX_OPTIMIZABLE_STOPS} stops with
-                  coordinates.
+                  MyRouteOnline needs at least {MIN_MRO_ROUTE_STOPS} stops.
                 </p>
               )}
             </div>
+            {route.mroError ? (
+              <p className="text-xs text-red-600 md:col-span-2">
+                {route.mroError}
+              </p>
+            ) : null}
+            {route.mroPrintAndDirectionsUrl || route.mroAppNavigationUrl ? (
+              <div className="flex flex-wrap gap-2 md:col-span-2">
+                {route.mroPrintAndDirectionsUrl ? (
+                  <a
+                    className="inline-flex h-9 items-center gap-2 rounded-full border border-black/10 px-3 text-xs font-medium text-black/60 transition hover:bg-black/5"
+                    href={route.mroPrintAndDirectionsUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    MRO directions
+                  </a>
+                ) : null}
+                {route.mroAppNavigationUrl ? (
+                  <a
+                    className="inline-flex h-9 items-center gap-2 rounded-full border border-black/10 px-3 text-xs font-medium text-black/60 transition hover:bg-black/5"
+                    href={route.mroAppNavigationUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    MyRoute app
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
           </form>
 
           {stopMarkers.length > 0 ? (
@@ -643,8 +765,14 @@ const RouteCard = ({
 };
 
 const AdminRoutesPage = () => {
-  const { contractors, customers, properties, routes, workOrders } =
-    adminRoutesRouteApi.useLoaderData() as AdminRoutesLoaderData;
+  const {
+    contractors,
+    customers,
+    mroSettings,
+    properties,
+    routes,
+    workOrders,
+  } = adminRoutesRouteApi.useLoaderData() as AdminRoutesLoaderData;
   const [batchPropertyForm, setBatchPropertyForm] = useState({
     propertyIds: [] as string[],
     routeId: "",
@@ -661,6 +789,8 @@ const AdminRoutesPage = () => {
   });
   const [createCustomerSelection, setCreateCustomerSelection] =
     useState<null | QuoteAddressSelection>(null);
+  const [createDuplicate, setCreateDuplicate] =
+    useState<AddressDuplicateResult>(null);
   const [expandedRouteId, setExpandedRouteId] = useState<null | string>(null);
   const [existingAddressError, setExistingAddressError] = useState("");
   const [existingAddressForm, setExistingAddressForm] = useState({
@@ -669,6 +799,8 @@ const AdminRoutesPage = () => {
   });
   const [existingAddressSelection, setExistingAddressSelection] =
     useState<null | QuoteAddressSelection>(null);
+  const [existingDuplicate, setExistingDuplicate] =
+    useState<AddressDuplicateResult>(null);
   const [existingCustomerForm, setExistingCustomerForm] = useState({
     customerId: "",
     propertyId: "",
@@ -683,6 +815,8 @@ const AdminRoutesPage = () => {
     setIsSavingExistingPropertySelection,
   ] = useState(false);
   const [isSavingCustomer, setIsSavingCustomer] = useState(false);
+  const [isSavingMroSettings, setIsSavingMroSettings] = useState(false);
+  const [mroSettingsForm, setMroSettingsForm] = useState({ apiKey: "" });
   const [routeForm, setRouteForm] = useState<{
     color: string;
     contractorId: string;
@@ -848,6 +982,40 @@ const AdminRoutesPage = () => {
     []
   );
 
+  const handleMroSettingsChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setMroSettingsForm({ apiKey: event.target.value });
+    },
+    []
+  );
+
+  const handleMroSettingsSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      setIsSavingMroSettings(true);
+
+      try {
+        await updateMyRouteOnlineSettings({
+          data: {
+            apiKey: mroSettingsForm.apiKey,
+          },
+        });
+        setMroSettingsForm({ apiKey: "" });
+        toast.success("MyRouteOnline API key saved");
+        window.location.reload();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to save MyRouteOnline API key"
+        );
+      } finally {
+        setIsSavingMroSettings(false);
+      }
+    },
+    [mroSettingsForm.apiKey]
+  );
+
   const handleCreateRouteColorSelect = useCallback((color: string) => {
     setRouteForm((current) => ({
       ...current,
@@ -994,14 +1162,28 @@ const AdminRoutesPage = () => {
   );
 
   const handleCreateCustomerSelectionChange = useCallback(
-    (selection: null | QuoteAddressSelection) => {
+    async (selection: null | QuoteAddressSelection) => {
       setCreateCustomerSelection(selection);
+      setCreateDuplicate(null);
 
       if (selection) {
         setCreateCustomerAddressError("");
+
+        const result = await checkAddressDuplicate({
+          data: {
+            addressLine2: createCustomerForm.addressLine2 || undefined,
+            city: selection.city,
+            formattedAddress: selection.formattedAddress,
+            radarPlaceId: selection.radarPlaceId,
+            state: selection.state,
+            street: selection.street,
+            zip: selection.zip,
+          },
+        });
+        setCreateDuplicate(result.duplicate);
       }
     },
-    []
+    [createCustomerForm.addressLine2]
   );
 
   const handleCreateCustomerAddressLine2Change = useCallback(
@@ -1129,14 +1311,29 @@ const AdminRoutesPage = () => {
   );
 
   const handleExistingAddressSelectionChange = useCallback(
-    (selection: null | QuoteAddressSelection) => {
+    async (selection: null | QuoteAddressSelection) => {
       setExistingAddressSelection(selection);
+      setExistingDuplicate(null);
 
       if (selection) {
         setExistingAddressError("");
+
+        const result = await checkAddressDuplicate({
+          data: {
+            addressLine2: existingAddressForm.addressLine2 || undefined,
+            city: selection.city,
+            customerId: existingCustomerForm.customerId || undefined,
+            formattedAddress: selection.formattedAddress,
+            radarPlaceId: selection.radarPlaceId,
+            state: selection.state,
+            street: selection.street,
+            zip: selection.zip,
+          },
+        });
+        setExistingDuplicate(result.duplicate);
       }
     },
-    []
+    [existingAddressForm.addressLine2, existingCustomerForm.customerId]
   );
 
   const handleExistingAddressLine2Change = useCallback((value: string) => {
@@ -1270,6 +1467,57 @@ const AdminRoutesPage = () => {
 
   return (
     <div className="stagger-children space-y-5">
+      <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        <div className="grid gap-5 lg:grid-cols-[1fr_420px] lg:items-end">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <KeyRound className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+                MyRouteOnline connection
+              </p>
+              <h2 className="mt-1 text-xl font-bold tracking-[-0.03em] text-black">
+                Route planner API key
+              </h2>
+              <p className="mt-1 text-sm text-black/45">
+                {mroSettings.hasApiKey
+                  ? "Configured from saved admin settings."
+                  : "Add the client's API key before sending production routes to MRO."}
+              </p>
+            </div>
+          </div>
+          <form
+            className="grid gap-3 sm:grid-cols-[1fr_auto]"
+            onSubmit={handleMroSettingsSubmit}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="mro-api-key">API key</Label>
+              <Input
+                autoComplete="off"
+                className="h-11 rounded-2xl border-black/10"
+                id="mro-api-key"
+                onChange={handleMroSettingsChange}
+                placeholder={
+                  mroSettings.hasApiKey
+                    ? "Enter a replacement key"
+                    : "MRO API key"
+                }
+                type="password"
+                value={mroSettingsForm.apiKey}
+              />
+            </div>
+            <Button
+              className="h-11 self-end rounded-full bg-black px-5 text-white hover:bg-black/90"
+              disabled={isSavingMroSettings}
+              type="submit"
+            >
+              {isSavingMroSettings ? "Saving..." : "Save key"}
+            </Button>
+          </form>
+        </div>
+      </section>
+
       {filteredMarkers.length > 0 || filteredPaths.length > 0 ? (
         <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
           <div className="mb-4 flex items-center justify-between gap-4">
@@ -1651,6 +1899,9 @@ const AdminRoutesPage = () => {
                 selectedAddress={createCustomerSelection}
               />
             </div>
+            <div className="lg:col-span-2">
+              <AddressDuplicateNotice duplicate={createDuplicate} />
+            </div>
 
             <div className="lg:col-span-2">
               <Button
@@ -1767,6 +2018,7 @@ const AdminRoutesPage = () => {
                 placeholder="Search the service address"
                 selectedAddress={existingAddressSelection}
               />
+              <AddressDuplicateNotice duplicate={existingDuplicate} />
 
               <Button
                 className="h-11 rounded-full bg-emerald-700 px-5 text-white hover:bg-emerald-800"
@@ -1811,6 +2063,7 @@ export const Route = createFileRoute("/admin/routes/")({
   loader: async () => ({
     contractors: await listContractors(),
     customers: await listCustomers(),
+    mroSettings: await getMyRouteOnlineSettings(),
     properties: await listProperties(),
     routes: await listRoutes(),
     workOrders: await listWorkOrders(),
