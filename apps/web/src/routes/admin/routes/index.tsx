@@ -10,7 +10,6 @@ import {
   ChevronUp,
   ExternalLink,
   KeyRound,
-  LayoutDashboard,
   MapPin,
   RefreshCcw,
   Send,
@@ -21,19 +20,12 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { EmptyState } from "@/components/empty-state";
-import { AddressAutocomplete } from "@/components/quote/address-autocomplete";
-import type { QuoteAddressSelection } from "@/components/quote/address-autocomplete";
 import { RadarStaticMap } from "@/components/radar-static-map";
 import type { StaticMapPath } from "@/components/radar-static-map";
-import { addCustomerProperty } from "@/functions/admin/add-customer-property";
-import { addPropertyToRoute } from "@/functions/admin/add-property-to-route";
 import { addRouteStop } from "@/functions/admin/add-route-stop";
-import { checkAddressDuplicate } from "@/functions/admin/check-address-duplicate";
-import { createCustomerBackfill } from "@/functions/admin/create-customer-backfill";
 import { createRouteRecord } from "@/functions/admin/create-route";
 import { getMyRouteOnlineSettings } from "@/functions/admin/get-myrouteonline-settings";
 import { listContractors } from "@/functions/admin/list-contractors";
-import { listCustomers } from "@/functions/admin/list-customers";
 import { listRoutes } from "@/functions/admin/list-routes";
 import { listWorkOrders } from "@/functions/admin/list-work-orders";
 import { reassignRoute } from "@/functions/admin/reassign-route";
@@ -50,9 +42,9 @@ const routeColorSchema = z
   .regex(/^0x[0-9a-fA-F]{6}$/, "Choose a valid route color");
 
 type RouteRecord = Awaited<ReturnType<typeof listRoutes>>[number];
+type WorkOrderRecord = Awaited<ReturnType<typeof listWorkOrders>>[number];
 interface AdminRoutesLoaderData {
   contractors: Awaited<ReturnType<typeof listContractors>>;
-  customers: Awaited<ReturnType<typeof listCustomers>>;
   mroSettings: Awaited<ReturnType<typeof getMyRouteOnlineSettings>>;
   routes: Awaited<ReturnType<typeof listRoutes>>;
   workOrders: Awaited<ReturnType<typeof listWorkOrders>>;
@@ -80,9 +72,6 @@ interface RouteMapMarker {
 }
 
 type RouteMapPath = StaticMapPath & { routeId: string };
-type AddressDuplicateResult = Awaited<
-  ReturnType<typeof checkAddressDuplicate>
->["duplicate"];
 
 const toRadarColor = (value: string): string => {
   if (/^0x[0-9a-fA-F]{6}$/.test(value)) {
@@ -109,6 +98,18 @@ const getStopCustomerName = (stop: RouteRecord["stops"][number]): string =>
   stop.property?.customer?.user?.name ??
   stop.workOrder?.quote?.customer?.user?.name ??
   "Unknown client";
+
+const getWorkOrderCustomerName = (workOrder: WorkOrderRecord): string =>
+  workOrder.quote?.customer?.user?.name ?? "Unknown client";
+
+const getWorkOrderService = (workOrder: WorkOrderRecord): string =>
+  workOrder.quote?.serviceType ?? "Service";
+
+const getWorkOrderTargetDate = (workOrder: WorkOrderRecord): string =>
+  workOrder.scheduledDate ??
+  workOrder.quote?.proposedWorkDate ??
+  workOrder.quote?.preferredStartDate ??
+  "No work date";
 
 const getStopStatusBadgeClass = (status: string): string => {
   if (status === "completed") {
@@ -144,27 +145,6 @@ const StopDirectBadge = ({
   }
 
   return <Badge className="bg-[#d6f18b] text-[#0a1a10]">Direct</Badge>;
-};
-
-const AddressDuplicateNotice = ({
-  duplicate,
-}: {
-  readonly duplicate: AddressDuplicateResult;
-}) => {
-  if (!duplicate) {
-    return null;
-  }
-
-  return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
-      {duplicate.isSameCustomer
-        ? "This customer already has this address on file."
-        : `This address already belongs to ${duplicate.customerName ?? "another customer"}.`}
-      <span className="block text-amber-700/80">
-        {duplicate.formattedAddress}
-      </span>
-    </div>
-  );
 };
 
 const StopCoordinates = ({
@@ -258,6 +238,35 @@ const RouteStopItem = ({
           </Badge>
         </div>
       </div>
+    </div>
+  );
+};
+
+const RouteStopSummaryItem = ({
+  stop,
+  stopIndex,
+}: {
+  readonly stop: RouteRecord["stops"][number];
+  readonly stopIndex: number;
+}) => {
+  const property = getStopProperty(stop);
+  const customerName = getStopCustomerName(stop);
+  const stopNumber = stop.mroStopNumber ?? stop.sequence + 1;
+
+  return (
+    <div className="grid gap-2 rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 md:grid-cols-[80px_1fr_auto] md:items-center">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-black/35">
+        Stop {stopNumber || stopIndex + 1}
+      </p>
+      <div>
+        <p className="font-medium text-black">{customerName}</p>
+        <p className="text-sm text-black/50">
+          {getPropertyDisplayAddress(property)}
+        </p>
+      </div>
+      <Badge className={getStopStatusBadgeClass(stop.status)}>
+        {stop.status}
+      </Badge>
     </div>
   );
 };
@@ -613,6 +622,29 @@ const RouteCard = ({
         </div>
       </button>
 
+      <div className="border-t border-black/6 px-6 py-4">
+        {route.stops.length > 0 ? (
+          <div className="space-y-2">
+            {route.stops.slice(0, 4).map((stop, index) => (
+              <RouteStopSummaryItem
+                key={stop.id}
+                stop={stop}
+                stopIndex={index}
+              />
+            ))}
+            {route.stops.length > 4 ? (
+              <p className="text-xs font-medium text-black/40">
+                Open route details to see {route.stops.length - 4} more stops.
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-sm text-black/40">
+            No stops on this route yet. Add a waiting work order above.
+          </p>
+        )}
+      </div>
+
       {expanded ? (
         <div className="border-t border-black/6 p-6">
           <form
@@ -763,64 +795,25 @@ const RouteCard = ({
 };
 
 const AdminRoutesPage = () => {
-  const { contractors, customers, mroSettings, routes, workOrders } =
+  const { contractors, mroSettings, routes, workOrders } =
     adminRoutesRouteApi.useLoaderData() as AdminRoutesLoaderData;
-  const [createCustomerAddressError, setCreateCustomerAddressError] =
-    useState("");
-  const [createCustomerForm, setCreateCustomerForm] = useState({
-    addressLine2: "",
-    email: "",
-    name: "",
-    nickname: "",
-    phone: "",
-    routeId: "",
-  });
-  const [createCustomerSelection, setCreateCustomerSelection] =
-    useState<null | QuoteAddressSelection>(null);
-  const [createDuplicate, setCreateDuplicate] =
-    useState<AddressDuplicateResult>(null);
   const [expandedRouteId, setExpandedRouteId] = useState<null | string>(null);
-  const [existingAddressError, setExistingAddressError] = useState("");
-  const [existingAddressForm, setExistingAddressForm] = useState({
-    addressLine2: "",
-    nickname: "",
-  });
-  const [existingAddressSelection, setExistingAddressSelection] =
-    useState<null | QuoteAddressSelection>(null);
-  const [existingDuplicate, setExistingDuplicate] =
-    useState<AddressDuplicateResult>(null);
-  const [existingCustomerForm, setExistingCustomerForm] = useState({
-    customerId: "",
-    propertyId: "",
-    routeId: "",
-  });
-  const [inlineCustomerMode, setInlineCustomerMode] = useState<
-    "create" | "existing"
-  >("create");
-  const [isSavingExistingAddress, setIsSavingExistingAddress] = useState(false);
-  const [
-    isSavingExistingPropertySelection,
-    setIsSavingExistingPropertySelection,
-  ] = useState(false);
-  const [isSavingCustomer, setIsSavingCustomer] = useState(false);
   const [isSavingMroSettings, setIsSavingMroSettings] = useState(false);
+  const [queueingWorkOrderId, setQueueingWorkOrderId] = useState<null | string>(
+    null
+  );
   const [mroSettingsForm, setMroSettingsForm] = useState({ apiKey: "" });
   const [routeForm, setRouteForm] = useState<{
-    color: string;
-    contractorId: string;
     name: string;
     routeDate: string;
   }>({
-    color: DEFAULT_ROUTE_COLOR,
-    contractorId: "",
     name: "",
     routeDate: "",
   });
   const [selectedRouteFilter, setSelectedRouteFilter] = useState<string>("all");
-  const [stopForm, setStopForm] = useState({
-    routeId: "",
-    workOrderId: "",
-  });
+  const [selectedRoutesByWorkOrder, setSelectedRoutesByWorkOrder] = useState<
+    Record<string, string>
+  >({});
 
   const handleSelectedRouteFilterChange = useCallback(
     (event: ChangeEvent<HTMLSelectElement>) => {
@@ -829,17 +822,37 @@ const AdminRoutesPage = () => {
     []
   );
 
-  const assignableOrders = useMemo(
-    () => workOrders.filter((order) => order.status !== "completed"),
-    [workOrders]
+  const routedWorkOrderIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    for (const route of routes) {
+      for (const stop of route.stops) {
+        if (stop.workOrderId) {
+          ids.add(stop.workOrderId);
+        }
+      }
+    }
+
+    return ids;
+  }, [routes]);
+
+  const readyWorkOrders = useMemo(
+    () =>
+      workOrders.filter(
+        (order) =>
+          order.status !== "completed" &&
+          order.status !== "canceled" &&
+          !routedWorkOrderIds.has(order.id)
+      ),
+    [routedWorkOrderIds, workOrders]
   );
 
   const routeStats = useMemo(() => {
-    let queuedStops = 0;
+    let routedStops = 0;
     let readyRoutes = 0;
 
     for (const route of routes) {
-      queuedStops += route.stops.length;
+      routedStops += route.stops.length;
 
       if (route.mroStatus === "finished" || route.status === "ready") {
         readyRoutes += 1;
@@ -847,10 +860,11 @@ const AdminRoutesPage = () => {
     }
 
     return {
-      queuedStops,
       readyRoutes,
+      readyWorkOrders: readyWorkOrders.length,
+      routedStops,
     };
-  }, [routes]);
+  }, [readyWorkOrders.length, routes]);
 
   const allMapMarkers = useMemo(() => {
     const markers: RouteMapMarker[] = [];
@@ -939,24 +953,6 @@ const AdminRoutesPage = () => {
     [allMapPaths, selectedRouteFilter]
   );
 
-  const selectedExistingCustomer = useMemo(
-    () =>
-      customers.find(
-        (customer) => customer.id === existingCustomerForm.customerId
-      ) ?? null,
-    [customers, existingCustomerForm.customerId]
-  );
-
-  const existingCustomerProperties = useMemo(
-    () => selectedExistingCustomer?.properties ?? [],
-    [selectedExistingCustomer]
-  );
-
-  const selectedStopRoute = useMemo(
-    () => routes.find((route) => route.id === stopForm.routeId) ?? null,
-    [routes, stopForm.routeId]
-  );
-
   const handleRouteChange = useCallback(
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const { name, value } = event.target;
@@ -1000,18 +996,18 @@ const AdminRoutesPage = () => {
     [mroSettingsForm.apiKey]
   );
 
-  const handleCreateRouteColorSelect = useCallback((color: string) => {
-    setRouteForm((current) => ({
-      ...current,
-      color,
-    }));
-  }, []);
+  const handleWorkOrderRouteChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      const { workOrderId } = event.currentTarget.dataset;
 
-  const handleStopChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      const { name, value } = event.target;
+      if (!workOrderId) {
+        return;
+      }
 
-      setStopForm((current) => ({ ...current, [name]: value }));
+      setSelectedRoutesByWorkOrder((current) => ({
+        ...current,
+        [workOrderId]: event.target.value,
+      }));
     },
     []
   );
@@ -1032,22 +1028,16 @@ const AdminRoutesPage = () => {
         return;
       }
 
-      if (!routeColorSchema.safeParse(routeForm.color).success) {
-        toast.error("Choose a valid route color");
-        return;
-      }
-
       try {
         await createRouteRecord({
           data: {
-            color: toRadarColor(routeForm.color),
-            contractorId: routeForm.contractorId || undefined,
+            color: DEFAULT_ROUTE_COLOR,
             name: normalizedRouteName,
             routeDate: routeForm.routeDate,
             status: "draft",
           },
         });
-        toast.success("Staging route created");
+        toast.success("Route added");
         window.location.reload();
       } catch (error) {
         toast.error(
@@ -1058,338 +1048,56 @@ const AdminRoutesPage = () => {
     [routeForm]
   );
 
-  const handleAddStop = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
+  const handleQueueWorkOrder = useCallback(
+    async (workOrder: WorkOrderRecord) => {
+      const routeId = selectedRoutesByWorkOrder[workOrder.id];
 
-      if (!stopForm.routeId) {
-        toast.error("Choose a staging route first");
+      if (!routeId) {
+        toast.error("Choose a route for this work order");
         return;
       }
 
-      if (!stopForm.workOrderId) {
-        toast.error("Choose a work order");
-        return;
-      }
+      const selectedRoute = routes.find((route) => route.id === routeId);
 
       try {
+        setQueueingWorkOrderId(workOrder.id);
         await addRouteStop({
           data: {
-            routeId: stopForm.routeId,
-            sequence: selectedStopRoute?.stops.length ?? 0,
+            routeId,
+            sequence: selectedRoute?.stops.length ?? 0,
             status: "pending",
-            workOrderId: stopForm.workOrderId,
+            workOrderId: workOrder.id,
           },
         });
-        toast.success("Work order queued for MRO");
-        window.location.reload();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to queue work order"
-        );
-      }
-    },
-    [selectedStopRoute?.stops.length, stopForm.routeId, stopForm.workOrderId]
-  );
-
-  const handleCreateCustomerSelectionChange = useCallback(
-    async (selection: null | QuoteAddressSelection) => {
-      setCreateCustomerSelection(selection);
-      setCreateDuplicate(null);
-
-      if (selection) {
-        setCreateCustomerAddressError("");
-
-        const result = await checkAddressDuplicate({
-          data: {
-            addressLine2: createCustomerForm.addressLine2 || undefined,
-            city: selection.city,
-            formattedAddress: selection.formattedAddress,
-            radarPlaceId: selection.radarPlaceId,
-            state: selection.state,
-            street: selection.street,
-            zip: selection.zip,
-          },
-        });
-        setCreateDuplicate(result.duplicate);
-      }
-    },
-    [createCustomerForm.addressLine2]
-  );
-
-  const handleCreateCustomerAddressLine2Change = useCallback(
-    (value: string) => {
-      setCreateCustomerForm((current) => ({
-        ...current,
-        addressLine2: value,
-      }));
-    },
-    []
-  );
-
-  const handleCreateCustomerChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      const { name, value } = event.target;
-
-      setCreateCustomerForm((current) => ({
-        ...current,
-        [name]: value,
-      }));
-    },
-    []
-  );
-
-  const handleCreateCustomerAndOptionallyAdd = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-
-      if (!createCustomerSelection) {
-        setCreateCustomerAddressError("Select a validated property address");
-        toast.error("Select a validated property address");
-        return;
-      }
-
-      setIsSavingCustomer(true);
-
-      try {
-        const result = await createCustomerBackfill({
-          data: {
-            ...createCustomerForm,
-            city: createCustomerSelection.city,
-            formattedAddress: createCustomerSelection.formattedAddress,
-            fullAddress: createCustomerSelection.formattedAddress,
-            latitude: createCustomerSelection.latitude,
-            longitude: createCustomerSelection.longitude,
-            radarMetadata: createCustomerSelection.radarMetadata,
-            radarPlaceId: createCustomerSelection.radarPlaceId,
-            state: createCustomerSelection.state,
-            street: createCustomerSelection.street,
-            validationStatus: "validated",
-            zip: createCustomerSelection.zip,
-          },
-        });
-
-        if (result.propertyId && createCustomerForm.routeId) {
-          await addPropertyToRoute({
-            data: {
-              propertyId: result.propertyId,
-              routeId: createCustomerForm.routeId,
-            },
-          });
-        }
-
-        toast.success(
-          createCustomerForm.routeId
-            ? "Client created and address queued"
-            : "Client created"
-        );
-        setCreateCustomerForm({
-          addressLine2: "",
-          email: "",
-          name: "",
-          nickname: "",
-          phone: "",
-          routeId: "",
-        });
-        setCreateCustomerSelection(null);
-        window.location.reload();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to create client"
-        );
-      } finally {
-        setIsSavingCustomer(false);
-      }
-    },
-    [createCustomerForm, createCustomerSelection]
-  );
-
-  const handleInlineCustomerMode = useCallback(
-    (mode: "create" | "existing") => {
-      setInlineCustomerMode(mode);
-    },
-    []
-  );
-
-  const handleCreateModeClick = useCallback(() => {
-    handleInlineCustomerMode("create");
-  }, [handleInlineCustomerMode]);
-
-  const handleExistingModeClick = useCallback(() => {
-    handleInlineCustomerMode("existing");
-  }, [handleInlineCustomerMode]);
-
-  const handleExistingCustomerChange = useCallback(
-    (event: ChangeEvent<HTMLSelectElement>) => {
-      const { name, value } = event.target;
-
-      setExistingCustomerForm((current) => {
-        if (name === "customerId") {
-          return {
-            customerId: value,
-            propertyId: "",
-            routeId: current.routeId,
-          };
-        }
-
-        return {
-          ...current,
-          [name]: value,
-        };
-      });
-    },
-    []
-  );
-
-  const handleExistingAddressSelectionChange = useCallback(
-    async (selection: null | QuoteAddressSelection) => {
-      setExistingAddressSelection(selection);
-      setExistingDuplicate(null);
-
-      if (selection) {
-        setExistingAddressError("");
-
-        const result = await checkAddressDuplicate({
-          data: {
-            addressLine2: existingAddressForm.addressLine2 || undefined,
-            city: selection.city,
-            customerId: existingCustomerForm.customerId || undefined,
-            formattedAddress: selection.formattedAddress,
-            radarPlaceId: selection.radarPlaceId,
-            state: selection.state,
-            street: selection.street,
-            zip: selection.zip,
-          },
-        });
-        setExistingDuplicate(result.duplicate);
-      }
-    },
-    [existingAddressForm.addressLine2, existingCustomerForm.customerId]
-  );
-
-  const handleExistingAddressLine2Change = useCallback((value: string) => {
-    setExistingAddressForm((current) => ({
-      ...current,
-      addressLine2: value,
-    }));
-  }, []);
-
-  const handleExistingAddressInput = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = event.target;
-
-      setExistingAddressForm((current) => ({
-        ...current,
-        [name]: value,
-      }));
-    },
-    []
-  );
-
-  const handleAddExistingPropertyToRoute = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-
-      if (!existingCustomerForm.routeId) {
-        toast.error("Choose a route first");
-        return;
-      }
-
-      if (!existingCustomerForm.propertyId) {
-        toast.error("Choose an existing address");
-        return;
-      }
-
-      setIsSavingExistingPropertySelection(true);
-
-      try {
-        await addPropertyToRoute({
-          data: {
-            propertyId: existingCustomerForm.propertyId,
-            routeId: existingCustomerForm.routeId,
-          },
-        });
-        toast.success("Existing address queued");
+        toast.success("Work order added to route");
         window.location.reload();
       } catch (error) {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Failed to add existing address to route"
+            : "Failed to add work order to route"
         );
       } finally {
-        setIsSavingExistingPropertySelection(false);
+        setQueueingWorkOrderId(null);
       }
     },
-    [existingCustomerForm.propertyId, existingCustomerForm.routeId]
+    [routes, selectedRoutesByWorkOrder]
   );
 
-  const handleCreateAddressForExistingCustomer = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
+  const handleQueueWorkOrderClick = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      const { workOrderId } = event.currentTarget.dataset;
+      const workOrder = readyWorkOrders.find(
+        (order) => order.id === workOrderId
+      );
 
-      if (!existingCustomerForm.customerId) {
-        toast.error("Choose a customer first");
+      if (!workOrder) {
         return;
       }
 
-      if (!existingAddressSelection) {
-        setExistingAddressError("Select a validated property address");
-        toast.error("Select a validated property address");
-        return;
-      }
-
-      setIsSavingExistingAddress(true);
-
-      try {
-        const result = await addCustomerProperty({
-          data: {
-            addressLine2: existingAddressForm.addressLine2,
-            city: existingAddressSelection.city,
-            customerId: existingCustomerForm.customerId,
-            formattedAddress: existingAddressSelection.formattedAddress,
-            latitude: existingAddressSelection.latitude,
-            longitude: existingAddressSelection.longitude,
-            nickname: existingAddressForm.nickname,
-            radarMetadata: existingAddressSelection.radarMetadata,
-            radarPlaceId: existingAddressSelection.radarPlaceId,
-            state: existingAddressSelection.state,
-            street: existingAddressSelection.street,
-            validationStatus: "validated",
-            zip: existingAddressSelection.zip,
-          },
-        });
-
-        if (existingCustomerForm.routeId) {
-          await addPropertyToRoute({
-            data: {
-              propertyId: result.propertyId,
-              routeId: existingCustomerForm.routeId,
-            },
-          });
-        }
-
-        toast.success(
-          existingCustomerForm.routeId
-            ? "Address created and queued"
-            : "Address created"
-        );
-        window.location.reload();
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to add address"
-        );
-      } finally {
-        setIsSavingExistingAddress(false);
-      }
+      handleQueueWorkOrder(workOrder);
     },
-    [
-      existingAddressForm.addressLine2,
-      existingAddressForm.nickname,
-      existingAddressSelection,
-      existingCustomerForm.customerId,
-      existingCustomerForm.routeId,
-    ]
+    [handleQueueWorkOrder, readyWorkOrders]
   );
 
   const toggleExpanded = useCallback((id: string) => {
@@ -1402,24 +1110,33 @@ const AdminRoutesPage = () => {
         <div className="grid gap-5 lg:grid-cols-[1fr_360px] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
-              MRO dispatch
+              Route dispatch
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-black">
-              Queue stops here. Plan the route in MyRouteOnline.
+              Route the work that is ready to dispatch.
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-black/50">
-              Fresh Mansions holds the customer, address, and work order. Send
-              the stop list to MyRouteOnline, import the finished order, then
-              dispatch the route to the assigned contractor.
+              Quotes start with a requested date range. After the estimate and
+              accepted quote, work orders land here so the admin can add them to
+              the matching MyRouteOnline route and bring the final stop order
+              back into Fresh Mansions.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-black/35">
-                Queued stops
+                Needs route
               </p>
               <p className="mt-2 text-3xl font-bold tracking-[-0.04em] text-black">
-                {routeStats.queuedStops}
+                {routeStats.readyWorkOrders}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-black/35">
+                Routed stops
+              </p>
+              <p className="mt-2 text-3xl font-bold tracking-[-0.04em] text-black">
+                {routeStats.routedStops}
               </p>
             </div>
             <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4">
@@ -1449,8 +1166,8 @@ const AdminRoutesPage = () => {
               </h2>
               <p className="mt-1 text-sm text-black/45">
                 {mroSettings.hasApiKey
-                  ? "Connected. New stop lists can be sent to MyRouteOnline."
-                  : "Add the MyRouteOnline API key before sending stop lists."}
+                  ? "Connected. Fresh Mansions can send route stops to MyRouteOnline."
+                  : "Add the MyRouteOnline API key before sending route stops."}
               </p>
             </div>
           </div>
@@ -1549,402 +1266,142 @@ const AdminRoutesPage = () => {
         </section>
       ) : null}
 
-      <section className="grid gap-5 xl:grid-cols-2">
-        <form
-          className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]"
-          onSubmit={handleCreateRoute}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-              <LayoutDashboard className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
-                MRO staging
-              </p>
-              <h3 className="text-lg font-bold tracking-[-0.03em] text-black">
-                Create a staging route
-              </h3>
-            </div>
-          </div>
-          <p className="mt-2 text-xs leading-relaxed text-black/40">
-            Start a route shell here, add the addresses that need service, then
-            let MyRouteOnline build the driving order.
-          </p>
-          <div className="mt-5 grid gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Route name</Label>
-              <Input
-                className="h-11 rounded-2xl border-black/10"
-                id="name"
-                name="name"
-                onChange={handleRouteChange}
-                placeholder="Thursday South Loop"
-                value={routeForm.name}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="routeDate">Date</Label>
-              <Input
-                className="h-11 rounded-2xl border-black/10"
-                id="routeDate"
-                name="routeDate"
-                onChange={handleRouteChange}
-                type="date"
-                value={routeForm.routeDate}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="contractorId">Contractor</Label>
-              <select
-                className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
-                id="contractorId"
-                name="contractorId"
-                onChange={handleRouteChange}
-                value={routeForm.contractorId}
-              >
-                <option value="">Unassigned</option>
-                {contractors.map((contractor) => (
-                  <option key={contractor.id} value={contractor.id}>
-                    {contractor.displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label>Route color</Label>
-              <RouteColorSwatches
-                idPrefix="route-create-color"
-                onSelect={handleCreateRouteColorSelect}
-                value={routeForm.color}
-              />
-            </div>
-            <Button
-              className="h-11 rounded-full bg-black px-5 text-white hover:bg-black/90"
-              type="submit"
-            >
-              Create staging route
-            </Button>
-          </div>
-        </form>
-
-        <form
-          className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]"
-          onSubmit={handleAddStop}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-              <LayoutDashboard className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
-                Work order queue
-              </p>
-              <h3 className="text-lg font-bold tracking-[-0.03em] text-black">
-                Queue a service stop
-              </h3>
-            </div>
-          </div>
-          <p className="mt-2 text-xs leading-relaxed text-black/40">
-            Add accepted work to a staging route. MyRouteOnline will decide the
-            final stop order after import.
-          </p>
-          <div className="mt-5 grid gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="routeId">Staging route</Label>
-              <select
-                className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
-                id="routeId"
-                name="routeId"
-                onChange={handleStopChange}
-                value={stopForm.routeId}
-              >
-                <option value="">Choose route</option>
-                {routes.map((route) => (
-                  <option key={route.id} value={route.id}>
-                    {route.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="workOrderId">Work order</Label>
-              <select
-                className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
-                id="workOrderId"
-                name="workOrderId"
-                onChange={handleStopChange}
-                value={stopForm.workOrderId}
-              >
-                <option value="">Choose work order</option>
-                {assignableOrders.map((order) => (
-                  <option key={order.id} value={order.id}>
-                    {order.quote?.customer?.user?.name ?? "Unknown"} /{" "}
-                    {order.quote?.serviceType ?? "service"}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Button
-              className="h-11 rounded-full bg-black px-5 text-white hover:bg-black/90"
-              type="submit"
-            >
-              Queue work order
-            </Button>
-          </div>
-        </form>
-      </section>
-
       <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-            <MapPin className="h-5 w-5" />
-          </div>
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
-              Address queue
+              Ready for routing
             </p>
-            <h3 className="text-lg font-bold tracking-[-0.03em] text-black">
-              Add an address for MRO
-            </h3>
-            <p className="mt-1 text-sm text-black/45">
-              Use this when a new address comes in by phone, text, or admin
-              backfill before it becomes a normal work order.
+            <h2 className="mt-1 text-xl font-bold tracking-[-0.03em] text-black">
+              Work orders waiting on an MRO route
+            </h2>
+            <p className="mt-1 max-w-3xl text-sm text-black/45">
+              These are accepted jobs that are not already on a route. Pick the
+              MRO route the admin created, then add the stop.
             </p>
           </div>
+          <Badge className="bg-black text-white">
+            {readyWorkOrders.length} waiting
+          </Badge>
         </div>
 
-        <div className="mb-4 grid gap-2 sm:grid-cols-2">
-          <button
-            className="flex items-center justify-between rounded-2xl border border-black/10 bg-[#f9f8f5] px-4 py-3 text-left"
-            onClick={handleCreateModeClick}
-            type="button"
-          >
-            <span className="text-sm font-semibold text-black">
-              New customer address
-            </span>
-            {inlineCustomerMode === "create" ? (
-              <ChevronUp className="h-4 w-4 text-black/40" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-black/40" />
-            )}
-          </button>
-
-          <button
-            className="flex items-center justify-between rounded-2xl border border-black/10 bg-[#f9f8f5] px-4 py-3 text-left"
-            onClick={handleExistingModeClick}
-            type="button"
-          >
-            <span className="text-sm font-semibold text-black">
-              Existing customer address
-            </span>
-            {inlineCustomerMode === "existing" ? (
-              <ChevronUp className="h-4 w-4 text-black/40" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-black/40" />
-            )}
-          </button>
-        </div>
-
-        {inlineCustomerMode === "create" ? (
-          <form
-            className="grid gap-4 lg:grid-cols-2"
-            onSubmit={handleCreateCustomerAndOptionallyAdd}
-          >
-            {[
-              ["name", "Full name", "Jordan Taylor"],
-              ["email", "Email", "jordan@example.com"],
-              ["phone", "Phone", "(555) 123-4567"],
-              ["nickname", "Property nickname", "Main residence"],
-            ].map(([field, label, placeholder]) => (
-              <div className="space-y-2" key={field}>
-                <Label htmlFor={`inline-create-${field}`}>{label}</Label>
-                <Input
-                  className="h-11 rounded-2xl border-black/10"
-                  id={`inline-create-${field}`}
-                  name={field}
-                  onChange={handleCreateCustomerChange}
-                  placeholder={placeholder}
-                  value={
-                    createCustomerForm[field as keyof typeof createCustomerForm]
-                  }
-                />
+        {readyWorkOrders.length === 0 ? (
+          <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-5 text-sm text-black/45">
+            Nothing is waiting for a route. New items appear here after a
+            customer accepts a quote and the work order is ready to schedule.
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {readyWorkOrders.map((workOrder) => (
+              <div
+                className="grid gap-4 rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 lg:grid-cols-[1fr_220px_150px]"
+                key={workOrder.id}
+              >
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-black">
+                      {getWorkOrderCustomerName(workOrder)}
+                    </p>
+                    <Badge className="bg-black/8 text-black/60">
+                      {getWorkOrderService(workOrder)}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-black/50">
+                    {getPropertyDisplayAddress(workOrder.quote?.property)}
+                  </p>
+                  <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-black/35">
+                    Work date: {getWorkOrderTargetDate(workOrder)}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`route-for-${workOrder.id}`}>Route</Label>
+                  <select
+                    className="h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-sm"
+                    data-work-order-id={workOrder.id}
+                    id={`route-for-${workOrder.id}`}
+                    onChange={handleWorkOrderRouteChange}
+                    value={selectedRoutesByWorkOrder[workOrder.id] ?? ""}
+                  >
+                    <option value="">Choose route</option>
+                    {routes.map((route) => (
+                      <option key={route.id} value={route.id}>
+                        {route.name} ({route.routeDate})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Button
+                  className="h-10 self-end rounded-full bg-black px-4 text-white hover:bg-black/90"
+                  data-work-order-id={workOrder.id}
+                  disabled={queueingWorkOrderId === workOrder.id}
+                  onClick={handleQueueWorkOrderClick}
+                  type="button"
+                >
+                  {queueingWorkOrderId === workOrder.id
+                    ? "Adding..."
+                    : "Add to route"}
+                </Button>
               </div>
             ))}
-
-            <div className="space-y-2 lg:col-span-2">
-              <Label htmlFor="inline-create-route-id">
-                Queue on staging route (optional)
-              </Label>
-              <select
-                className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
-                id="inline-create-route-id"
-                name="routeId"
-                onChange={handleCreateCustomerChange}
-                value={createCustomerForm.routeId}
-              >
-                <option value="">Save address only</option>
-                {routes.map((route) => (
-                  <option key={route.id} value={route.id}>
-                    {route.name} ({route.routeDate})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="rounded-2xl border border-black/6 bg-[#f9f8f5] p-4 lg:col-span-2">
-              <AddressAutocomplete
-                addressError={createCustomerAddressError}
-                addressLine2={createCustomerForm.addressLine2}
-                addressLine2Label="Address line 2"
-                addressPlaceholder="Suite, gate code, or unit"
-                label="Validated property address"
-                onAddressLine2Change={handleCreateCustomerAddressLine2Change}
-                onSelectionChange={handleCreateCustomerSelectionChange}
-                placeholder="Search the service address"
-                selectedAddress={createCustomerSelection}
-              />
-            </div>
-            <div className="lg:col-span-2">
-              <AddressDuplicateNotice duplicate={createDuplicate} />
-            </div>
-
-            <div className="lg:col-span-2">
-              <Button
-                className="h-11 rounded-full bg-black px-5 text-white hover:bg-black/90"
-                disabled={isSavingCustomer}
-                type="submit"
-              >
-                {isSavingCustomer
-                  ? "Creating client..."
-                  : "Create client and queue address"}
-              </Button>
-            </div>
-          </form>
-        ) : (
-          <div className="grid gap-5 lg:grid-cols-2">
-            <form
-              className="grid gap-4 rounded-2xl border border-black/8 bg-[#f9f8f5] p-4"
-              onSubmit={handleAddExistingPropertyToRoute}
-            >
-              <div className="space-y-2">
-                <Label htmlFor="inline-existing-customer-id">Customer</Label>
-                <select
-                  className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
-                  id="inline-existing-customer-id"
-                  name="customerId"
-                  onChange={handleExistingCustomerChange}
-                  value={existingCustomerForm.customerId}
-                >
-                  <option value="">Choose customer</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.user?.name ?? "Unknown"} (
-                      {customer.user?.email ?? "no email"})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="inline-existing-route-id">Staging route</Label>
-                <select
-                  className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
-                  id="inline-existing-route-id"
-                  name="routeId"
-                  onChange={handleExistingCustomerChange}
-                  value={existingCustomerForm.routeId}
-                >
-                  <option value="">Choose route</option>
-                  {routes.map((route) => (
-                    <option key={route.id} value={route.id}>
-                      {route.name} ({route.routeDate})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="inline-existing-property-id">
-                  Existing address
-                </Label>
-                <select
-                  className="h-11 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm"
-                  id="inline-existing-property-id"
-                  name="propertyId"
-                  onChange={handleExistingCustomerChange}
-                  value={existingCustomerForm.propertyId}
-                >
-                  <option value="">Choose existing address</option>
-                  {existingCustomerProperties.map((property) => (
-                    <option key={property.id} value={property.id}>
-                      {getPropertyDisplayAddress(property)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <Button
-                className="h-11 rounded-full bg-black px-5 text-white hover:bg-black/90"
-                disabled={isSavingExistingPropertySelection}
-                type="submit"
-              >
-                {isSavingExistingPropertySelection
-                  ? "Queueing address..."
-                  : "Queue existing address"}
-              </Button>
-            </form>
-
-            <form
-              className="grid gap-4 rounded-2xl border border-black/8 bg-[#f9f8f5] p-4"
-              onSubmit={handleCreateAddressForExistingCustomer}
-            >
-              <div className="space-y-2">
-                <Label htmlFor="inline-existing-nickname">
-                  New property nickname
-                </Label>
-                <Input
-                  className="h-11 rounded-2xl border-black/10 bg-white"
-                  id="inline-existing-nickname"
-                  name="nickname"
-                  onChange={handleExistingAddressInput}
-                  placeholder="Main residence"
-                  value={existingAddressForm.nickname}
-                />
-              </div>
-
-              <AddressAutocomplete
-                addressError={existingAddressError}
-                addressLine2={existingAddressForm.addressLine2}
-                addressLine2Label="Address line 2"
-                addressPlaceholder="Suite, gate code, or unit"
-                label="Validated property address"
-                onAddressLine2Change={handleExistingAddressLine2Change}
-                onSelectionChange={handleExistingAddressSelectionChange}
-                placeholder="Search the service address"
-                selectedAddress={existingAddressSelection}
-              />
-              <AddressDuplicateNotice duplicate={existingDuplicate} />
-
-              <Button
-                className="h-11 rounded-full bg-emerald-700 px-5 text-white hover:bg-emerald-800"
-                disabled={isSavingExistingAddress}
-                type="submit"
-              >
-                {isSavingExistingAddress
-                  ? "Creating address..."
-                  : "Create address for selected customer"}
-              </Button>
-            </form>
           </div>
         )}
       </section>
 
+      <section className="rounded-3xl border border-black/6 bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        <form
+          className="grid gap-5 lg:grid-cols-[1fr_240px_220px_auto]"
+          onSubmit={handleCreateRoute}
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/35">
+              Route list
+            </p>
+            <h2 className="mt-1 text-xl font-bold tracking-[-0.03em] text-black">
+              Missing a route?
+            </h2>
+            <p className="mt-1 text-sm text-black/45">
+              Add a route name here when the route exists in MyRouteOnline but
+              is not listed in Fresh Mansions yet.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="name">Route name</Label>
+            <Input
+              className="h-11 rounded-2xl border-black/10"
+              id="name"
+              name="name"
+              onChange={handleRouteChange}
+              placeholder="Thursday South Loop"
+              value={routeForm.name}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="routeDate">Work date</Label>
+            <Input
+              className="h-11 rounded-2xl border-black/10"
+              id="routeDate"
+              name="routeDate"
+              onChange={handleRouteChange}
+              type="date"
+              value={routeForm.routeDate}
+            />
+          </div>
+          <div className="grid gap-2 self-end">
+            <Button
+              className="h-11 rounded-full bg-black px-5 text-white hover:bg-black/90"
+              type="submit"
+            >
+              Add route
+            </Button>
+          </div>
+        </form>
+      </section>
+
       {routes.length === 0 ? (
         <EmptyState
-          description="Create a staging route, queue the addresses that need service, then send the stop list to MyRouteOnline."
+          description="Add the route name here after the admin creates it in MyRouteOnline, then move ready work orders onto it."
           illustration="leaf"
-          title="No staging routes yet"
+          title="No routes are listed yet"
         />
       ) : (
         <section className="grid gap-5">
@@ -1968,7 +1425,6 @@ export const Route = createFileRoute("/admin/routes/")({
   component: AdminRoutesPage,
   loader: async () => ({
     contractors: await listContractors(),
-    customers: await listCustomers(),
     mroSettings: await getMyRouteOnlineSettings(),
     routes: await listRoutes(),
     workOrders: await listWorkOrders(),
