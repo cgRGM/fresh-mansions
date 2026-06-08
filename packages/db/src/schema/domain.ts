@@ -192,6 +192,7 @@ export const route = sqliteTable(
     mroAppNavigationUrl: text("mro_app_navigation_url"),
     mroError: text("mro_error"),
     mroJobToken: text("mro_job_token"),
+    mroLastCheckedAt: integer("mro_last_checked_at", { mode: "timestamp_ms" }),
     mroPrintAndDirectionsUrl: text("mro_print_and_directions_url"),
     mroResponse: text("mro_response", { mode: "json" }),
     mroStatus: text("mro_status").notNull().default("not_submitted"),

@@ -10,6 +10,7 @@ import { authMiddleware } from "@/middleware/auth";
 import { requireRoleMiddleware } from "@/middleware/roles";
 
 const MYROUTEONLINE_API_KEY_SETTING = "myrouteonline.apiKey";
+const MIN_ROUTE_PLAN_CHECK_INTERVAL_MS = 5000;
 
 const syncMyRouteOnlineRouteSchema = z.object({
   routeId: z.string().min(1, "Route is required"),
@@ -52,6 +53,24 @@ export const syncMyRouteOnlineRoute = createServerFn({ method: "POST" })
     if (!routeRecord.mroJobToken) {
       throw new Error("Send this route to MyRouteOnline first");
     }
+
+    if (routeRecord.mroLastCheckedAt) {
+      const elapsedMs = Date.now() - routeRecord.mroLastCheckedAt.getTime();
+
+      if (elapsedMs < MIN_ROUTE_PLAN_CHECK_INTERVAL_MS) {
+        const waitSeconds = Math.ceil(
+          (MIN_ROUTE_PLAN_CHECK_INTERVAL_MS - elapsedMs) / 1000
+        );
+        throw new Error(
+          `Wait ${String(waitSeconds)} more seconds before checking MyRouteOnline again`
+        );
+      }
+    }
+
+    await db
+      .update(route)
+      .set({ mroLastCheckedAt: new Date() })
+      .where(eq(route.id, data.routeId));
 
     const response = await checkMyRouteOnlinePlan({
       apiKey,

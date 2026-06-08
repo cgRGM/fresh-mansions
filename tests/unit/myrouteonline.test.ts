@@ -66,6 +66,7 @@ describe("MyRouteOnline client", () => {
           },
         ],
       },
+      routingParameters: { visitClosestFirst: "true" },
     });
   });
 

@@ -23,6 +23,7 @@ import { EmptyState } from "@/components/empty-state";
 import { RadarStaticMap } from "@/components/radar-static-map";
 import type { StaticMapPath } from "@/components/radar-static-map";
 import { addRouteStop } from "@/functions/admin/add-route-stop";
+import { attachMyRouteOnlineJobToken } from "@/functions/admin/attach-myrouteonline-job-token";
 import { createRouteRecord } from "@/functions/admin/create-route";
 import { getMyRouteOnlineSettings } from "@/functions/admin/get-myrouteonline-settings";
 import { listContractors } from "@/functions/admin/list-contractors";
@@ -333,6 +334,10 @@ const RouteCard = ({
   const [isSavingReorder, setIsSavingReorder] = useState(false);
   const [isSubmittingMro, setIsSubmittingMro] = useState(false);
   const [isSyncingMro, setIsSyncingMro] = useState(false);
+  const [isAttachingMroJobToken, setIsAttachingMroJobToken] = useState(false);
+  const [mroJobTokenForm, setMroJobTokenForm] = useState({
+    jobToken: route.mroJobToken ?? "",
+  });
   const [reassignmentForm, setReassignmentForm] = useState({
     color: toRadarColor(routeColor),
     contractorId: route.contractorId ?? "",
@@ -413,6 +418,13 @@ const RouteCard = ({
       color,
     }));
   }, []);
+
+  const handleMroJobTokenChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setMroJobTokenForm({ jobToken: event.target.value });
+    },
+    []
+  );
 
   const handleReassignmentSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -523,6 +535,41 @@ const RouteCard = ({
       setIsSubmittingMro(false);
     }
   }, [route.id]);
+
+  const handleAttachMroJobToken = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+
+      const jobToken = mroJobTokenForm.jobToken.trim();
+
+      if (!jobToken) {
+        toast.error("Paste the MRO job token first");
+        return;
+      }
+
+      setIsAttachingMroJobToken(true);
+
+      try {
+        await attachMyRouteOnlineJobToken({
+          data: {
+            jobToken,
+            routeId: route.id,
+          },
+        });
+        toast.success("MRO job token attached");
+        window.location.reload();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to attach MRO job token"
+        );
+      } finally {
+        setIsAttachingMroJobToken(false);
+      }
+    },
+    [mroJobTokenForm.jobToken, route.id]
+  );
 
   const handleSyncFromMro = useCallback(async () => {
     setIsSyncingMro(true);
@@ -752,6 +799,36 @@ const RouteCard = ({
                 ) : null}
               </div>
             ) : null}
+          </form>
+
+          <form
+            className="mb-5 grid gap-3 rounded-2xl border border-black/8 bg-[#f9f8f5] p-4 md:grid-cols-[1fr_auto]"
+            onSubmit={handleAttachMroJobToken}
+          >
+            <div className="space-y-1">
+              <Label htmlFor={`mro-job-token-${route.id}`}>MRO job token</Label>
+              <Input
+                autoComplete="off"
+                className="h-10 rounded-xl border-black/10 bg-white"
+                id={`mro-job-token-${route.id}`}
+                onChange={handleMroJobTokenChange}
+                placeholder="Paste the jobToken from MyRouteOnline"
+                value={mroJobTokenForm.jobToken}
+              />
+              <p className="text-xs leading-relaxed text-black/40">
+                Use this when the route was already planned and visualized in
+                MyRouteOnline. Attach the token, then import the finished stop
+                order.
+              </p>
+            </div>
+            <Button
+              className="h-10 self-start rounded-full border-black/20 md:self-end"
+              disabled={isAttachingMroJobToken}
+              type="submit"
+              variant="outline"
+            >
+              {isAttachingMroJobToken ? "Attaching..." : "Attach token"}
+            </Button>
           </form>
 
           {stopMarkers.length > 0 ? (
@@ -1169,6 +1246,15 @@ const AdminRoutesPage = () => {
                   ? "Connected. Fresh Mansions can send route stops to MyRouteOnline."
                   : "Add the MyRouteOnline API key before sending route stops."}
               </p>
+              <a
+                className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-black/60 transition hover:text-black"
+                href="https://planner.myrouteonline.com"
+                rel="noreferrer"
+                target="_blank"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open MyRouteOnline planner
+              </a>
             </div>
           </div>
           <form
