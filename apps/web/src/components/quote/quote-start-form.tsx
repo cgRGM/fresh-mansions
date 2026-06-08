@@ -20,22 +20,25 @@ interface QuoteStartValues {
   startDate: string;
 }
 
-const toDateKey = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
-    date.getDate()
+const toUtcDateKey = (date: Date) =>
+  `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    date.getUTCDate()
   ).padStart(2, "0")}`;
 
 const getDefaultWindow = (): QuoteStartValues => {
-  const start = new Date();
-  start.setDate(start.getDate() + 2);
+  const today = new Date();
+  const start = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  );
+  start.setUTCDate(start.getUTCDate() + 2);
 
   const end = new Date(start);
-  end.setDate(start.getDate() + 3);
+  end.setUTCDate(start.getUTCDate() + 3);
 
   return {
-    endDate: toDateKey(end),
+    endDate: toUtcDateKey(end),
     preferredVisitTime: "morning",
-    startDate: toDateKey(start),
+    startDate: toUtcDateKey(start),
   };
 };
 

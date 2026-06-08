@@ -22,6 +22,7 @@ export default defineConfig({
   test: {
     clearMocks: true,
     environment: "node",
+    fileParallelism: false,
     globals: true,
     include: ["tests/**/*.test.ts"],
     mockReset: true,
